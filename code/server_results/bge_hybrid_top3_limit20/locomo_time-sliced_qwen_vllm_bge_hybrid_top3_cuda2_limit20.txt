@@ -1,0 +1,223 @@
+Reranker preflight: flagembedding:BAAI/bge-reranker-v2-m3 on devices=cuda:2
+Reranker preflight OK: provider=flagembedding selected=['preflight_relevant']
+[eval] done 1/20 sample=locomo_c01_tsqa_001 proactive_recall=1.000 final_ids=m_003,m_002,m_001 verifier=reranker:flagembedding/use
+[eval] done 2/20 sample=locomo_c01_tsqa_002 proactive_recall=1.000 final_ids=m_012,m_011,m_009 verifier=reranker:flagembedding/use
+[eval] done 3/20 sample=locomo_c01_tsqa_003 proactive_recall=1.000 final_ids=m_011,m_009,m_010 verifier=reranker:flagembedding/use
+[eval] done 4/20 sample=locomo_c01_tsqa_004 proactive_recall=1.000 final_ids=m_026,m_025,m_021 verifier=reranker:flagembedding/use
+[eval] done 5/20 sample=locomo_c01_tsqa_005 proactive_recall=1.000 final_ids=m_004,m_005,m_003 verifier=reranker:flagembedding/use
+[eval] done 6/20 sample=locomo_c01_tsqa_006 proactive_recall=1.000 final_ids=m_019,m_018,m_012 verifier=reranker:flagembedding/use
+[eval] done 7/20 sample=locomo_c01_tsqa_007 proactive_recall=1.000 final_ids=m_025,m_023,m_021 verifier=reranker:flagembedding/use
+[eval] done 8/20 sample=locomo_c01_tsqa_008 proactive_recall=1.000 final_ids=m_048,m_028,m_046 verifier=reranker:flagembedding/use
+[eval] done 9/20 sample=locomo_c01_tsqa_009 proactive_recall=1.000 final_ids=m_036,m_028,m_035 verifier=reranker:flagembedding/use
+[eval] done 10/20 sample=locomo_c01_tsqa_010 proactive_recall=1.000 final_ids=m_046,m_028,m_045 verifier=reranker:flagembedding/use
+[eval] done 11/20 sample=locomo_c01_tsqa_011 proactive_recall=1.000 final_ids=m_048,m_028,m_046 verifier=reranker:flagembedding/use
+[eval] done 12/20 sample=locomo_c01_tsqa_012 proactive_recall=0.500 final_ids=m_058,m_061,m_036 verifier=reranker:flagembedding/use
+[eval] done 13/20 sample=locomo_c01_tsqa_013 proactive_recall=1.000 final_ids=m_063,m_062,m_028 verifier=reranker:flagembedding/use
+[eval] done 14/20 sample=locomo_c01_tsqa_014 proactive_recall=1.000 final_ids=m_069,m_071,m_070 verifier=reranker:flagembedding/use
+[eval] done 15/20 sample=locomo_c01_tsqa_015 proactive_recall=0.500 final_ids=m_069,m_073,m_071 verifier=reranker:flagembedding/use
+[eval] done 16/20 sample=locomo_c01_tsqa_016 proactive_recall=0.250 final_ids=m_137,m_175,m_116 verifier=reranker:flagembedding/use
+[eval] done 17/20 sample=locomo_c01_tsqa_017 proactive_recall=1.000 final_ids=m_080,m_061,m_077 verifier=reranker:flagembedding/use
+[eval] done 18/20 sample=locomo_c01_tsqa_018 proactive_recall=1.000 final_ids=m_089,m_080,m_088 verifier=reranker:flagembedding/use
+[eval] done 19/20 sample=locomo_c01_tsqa_019 proactive_recall=0.667 final_ids=m_108,m_167,m_066 verifier=reranker:flagembedding/use
+[eval] done 20/20 sample=locomo_c01_tsqa_020 proactive_recall=0.500 final_ids=m_098,m_096,m_025 verifier=reranker:flagembedding/use
+PreAct-Memory LoCoMo Evaluation
+Eval mode: time-sliced
+Samples: 20
+Predictor: vllm
+vLLM endpoint: http://127.0.0.1:30000/v1
+vLLM model: ../Qwen2.5-7B-Instruct
+LoCoMo path: /home/yanghaotong/premem/code/code/data/locomo/locomo10.json
+LoCoMo source: https://raw.githubusercontent.com/snap-research/locomo/main/data/locomo10.json
+History slicing: per-QA prefix through latest gold evidence turn
+
+Activation Quality
+method                    | budget | precision | recall | hit_rate | wasted_rate
+--------------------------+--------+-----------+--------+----------+------------
+Random Cache              | 5      | 0.077     | 0.275  | 0.300    | 0.923      
+Recency Cache             | 5      | 0.217     | 0.804  | 1.000    | 0.783      
+Reactive Vector Retrieval | 5      | 0.107     | 0.450  | 0.500    | 0.893      
+Reactive Graph Retrieval  | 5      | 0.067     | 0.275  | 0.300    | 0.933      
+LLM-Predict Cache Only    | 5      | 0.367     | 0.821  | 1.000    | 0.633      
+LLM-Predict + Fallback    | 5      | 0.367     | 0.821  | 1.000    | 0.633      
+Oracle Cache              | 5      | 1.000     | 1.000  | 1.000    | 0.000      
+
+Answer Quality
+method                    | f1    | rouge_l | llm_judge | faithfulness
+--------------------------+-------+---------+-----------+-------------
+Random Cache              | 0.010 | 0.042   | 0.026     | 0.283       
+Recency Cache             | 0.018 | 0.055   | 0.036     | 0.427       
+Reactive Vector Retrieval | 0.010 | 0.121   | 0.066     | 0.983       
+Reactive Graph Retrieval  | 0.008 | 0.105   | 0.057     | 0.983       
+LLM-Predict Cache Only    | 0.024 | 0.370   | 0.197     | 0.982       
+LLM-Predict + Fallback    | 0.024 | 0.370   | 0.197     | 0.982       
+Oracle Cache              | 0.051 | 0.444   | 0.248     | 0.961       
+
+Efficiency
+method                    | query_time_latency_ms | idle_time_cost | total_tokens | hit_rate | fallback_rate
+--------------------------+-----------------------+----------------+--------------+----------+--------------
+Random Cache              | 6.800                 | 0.000          | 1680.850     | 0.300    | 0.000        
+Recency Cache             | 7.200                 | 0.000          | 1689.250     | 1.000    | 0.000        
+Reactive Vector Retrieval | 27.800                | 0.000          | 1846.500     | 0.500    | 1.000        
+Reactive Graph Retrieval  | 27.800                | 0.000          | 1842.300     | 0.300    | 1.000        
+LLM-Predict Cache Only    | 12.000                | 30.000         | 1862.900     | 1.000    | 0.000        
+LLM-Predict + Fallback    | 12.000                | 30.000         | 1862.900     | 1.000    | 0.000        
+Oracle Cache              | 9.100                 | 0.000          | 1749.700     | 1.000    | 0.000        
+
+Per-Sample Selected Memories
+
+Random Cache
+  locomo_c01_tsqa_001: m_003, m_002
+  locomo_c01_tsqa_002: (none)
+  locomo_c01_tsqa_003: (none)
+  locomo_c01_tsqa_004: (none)
+  locomo_c01_tsqa_005: m_004, m_002
+  locomo_c01_tsqa_006: (none)
+  locomo_c01_tsqa_007: (none)
+  locomo_c01_tsqa_008: m_002
+  locomo_c01_tsqa_009: (none)
+  locomo_c01_tsqa_010: (none)
+  locomo_c01_tsqa_011: (none)
+  locomo_c01_tsqa_012: (none)
+  locomo_c01_tsqa_013: (none)
+  locomo_c01_tsqa_014: m_002
+  locomo_c01_tsqa_015: (none)
+  locomo_c01_tsqa_016: m_120
+  locomo_c01_tsqa_017: (none)
+  locomo_c01_tsqa_018: m_089
+  locomo_c01_tsqa_019: (none)
+  locomo_c01_tsqa_020: (none)
+
+Recency Cache
+  locomo_c01_tsqa_001: m_003, m_002
+  locomo_c01_tsqa_002: (none)
+  locomo_c01_tsqa_003: (none)
+  locomo_c01_tsqa_004: (none)
+  locomo_c01_tsqa_005: m_004, m_002
+  locomo_c01_tsqa_006: (none)
+  locomo_c01_tsqa_007: (none)
+  locomo_c01_tsqa_008: (none)
+  locomo_c01_tsqa_009: (none)
+  locomo_c01_tsqa_010: m_046
+  locomo_c01_tsqa_011: m_047
+  locomo_c01_tsqa_012: (none)
+  locomo_c01_tsqa_013: (none)
+  locomo_c01_tsqa_014: m_068, m_070
+  locomo_c01_tsqa_015: m_069
+  locomo_c01_tsqa_016: (none)
+  locomo_c01_tsqa_017: m_080
+  locomo_c01_tsqa_018: m_089
+  locomo_c01_tsqa_019: (none)
+  locomo_c01_tsqa_020: m_097
+
+Reactive Vector Retrieval
+  locomo_c01_tsqa_001: m_003, m_002, m_001
+  locomo_c01_tsqa_002: m_004, m_006, m_008, m_012, m_003
+  locomo_c01_tsqa_003: m_002, m_011, m_001, m_003, m_010
+  locomo_c01_tsqa_004: m_004, m_010, m_002, m_017, m_001
+  locomo_c01_tsqa_005: m_004, m_002, m_001, m_003, m_005
+  locomo_c01_tsqa_006: m_019, m_004, m_015, m_006, m_016
+  locomo_c01_tsqa_007: m_013, m_021, m_018, m_025, m_022
+  locomo_c01_tsqa_008: m_013, m_004, m_002, m_008, m_024
+  locomo_c01_tsqa_009: m_026, m_003, m_004, m_015, m_021
+  locomo_c01_tsqa_010: m_046, m_002, m_026, m_030, m_024
+  locomo_c01_tsqa_011: m_007, m_047, m_001, m_019, m_005
+  locomo_c01_tsqa_012: m_060, m_004, m_052, m_048, m_051
+  locomo_c01_tsqa_013: m_050, m_054, m_004, m_001, m_016
+  locomo_c01_tsqa_014: m_068, m_007, m_070, m_001, m_002
+  locomo_c01_tsqa_015: m_069, m_003, m_032, m_011, m_072
+  locomo_c01_tsqa_016: m_100, m_153, m_120, m_008, m_029
+  locomo_c01_tsqa_017: m_015, m_080, m_006, m_075, m_033
+  locomo_c01_tsqa_018: m_089, m_018, m_007, m_060, m_021
+  locomo_c01_tsqa_019: m_130, m_118, m_135, m_132, m_088
+  locomo_c01_tsqa_020: m_008, m_002, m_068, m_070, m_072
+
+Reactive Graph Retrieval
+  locomo_c01_tsqa_001: m_003, m_002, m_001
+  locomo_c01_tsqa_002: m_004, m_006, m_008, m_003, m_010
+  locomo_c01_tsqa_003: m_002, m_004, m_003, m_010, m_007
+  locomo_c01_tsqa_004: m_004, m_002, m_010, m_017, m_006
+  locomo_c01_tsqa_005: m_004, m_002, m_003, m_001, m_005
+  locomo_c01_tsqa_006: m_004, m_006, m_015, m_016, m_019
+  locomo_c01_tsqa_007: m_013, m_018, m_021, m_004, m_006
+  locomo_c01_tsqa_008: m_013, m_004, m_002, m_024, m_027
+  locomo_c01_tsqa_009: m_026, m_004, m_003, m_015, m_021
+  locomo_c01_tsqa_010: m_002, m_046, m_024, m_026, m_030
+  locomo_c01_tsqa_011: m_007, m_047, m_006, m_018, m_019
+  locomo_c01_tsqa_012: m_004, m_060, m_052, m_048, m_002
+  locomo_c01_tsqa_013: m_050, m_004, m_054, m_016, m_013
+  locomo_c01_tsqa_014: m_068, m_002, m_007, m_070, m_004
+  locomo_c01_tsqa_015: m_069, m_002, m_003, m_032, m_068
+  locomo_c01_tsqa_016: m_106, m_002, m_100, m_097, m_029
+  locomo_c01_tsqa_017: m_006, m_075, m_002, m_015, m_068
+  locomo_c01_tsqa_018: m_002, m_018, m_089, m_007, m_060
+  locomo_c01_tsqa_019: m_106, m_097, m_002, m_130, m_164
+  locomo_c01_tsqa_020: m_002, m_008, m_068, m_004, m_097
+
+LLM-Predict Cache Only
+  locomo_c01_tsqa_001: m_003, m_002, m_001
+  locomo_c01_tsqa_002: m_012, m_011, m_009
+  locomo_c01_tsqa_003: m_011, m_009, m_010
+  locomo_c01_tsqa_004: m_026, m_025, m_021
+  locomo_c01_tsqa_005: m_004, m_005, m_003
+  locomo_c01_tsqa_006: m_019, m_018, m_012
+  locomo_c01_tsqa_007: m_025, m_023, m_021
+  locomo_c01_tsqa_008: m_048, m_028, m_046
+  locomo_c01_tsqa_009: m_036, m_028, m_035
+  locomo_c01_tsqa_010: m_046, m_028, m_045
+  locomo_c01_tsqa_011: m_048, m_028, m_046
+  locomo_c01_tsqa_012: m_058, m_061, m_036
+  locomo_c01_tsqa_013: m_063, m_062, m_028
+  locomo_c01_tsqa_014: m_069, m_071, m_070
+  locomo_c01_tsqa_015: m_069, m_073, m_071
+  locomo_c01_tsqa_016: m_137, m_175, m_116
+  locomo_c01_tsqa_017: m_080, m_061, m_077
+  locomo_c01_tsqa_018: m_089, m_080, m_088
+  locomo_c01_tsqa_019: m_108, m_167, m_066
+  locomo_c01_tsqa_020: m_098, m_096, m_025
+
+LLM-Predict + Fallback
+  locomo_c01_tsqa_001: m_003, m_002, m_001
+  locomo_c01_tsqa_002: m_012, m_011, m_009
+  locomo_c01_tsqa_003: m_011, m_009, m_010
+  locomo_c01_tsqa_004: m_026, m_025, m_021
+  locomo_c01_tsqa_005: m_004, m_005, m_003
+  locomo_c01_tsqa_006: m_019, m_018, m_012
+  locomo_c01_tsqa_007: m_025, m_023, m_021
+  locomo_c01_tsqa_008: m_048, m_028, m_046
+  locomo_c01_tsqa_009: m_036, m_028, m_035
+  locomo_c01_tsqa_010: m_046, m_028, m_045
+  locomo_c01_tsqa_011: m_048, m_028, m_046
+  locomo_c01_tsqa_012: m_058, m_061, m_036
+  locomo_c01_tsqa_013: m_063, m_062, m_028
+  locomo_c01_tsqa_014: m_069, m_071, m_070
+  locomo_c01_tsqa_015: m_069, m_073, m_071
+  locomo_c01_tsqa_016: m_137, m_175, m_116
+  locomo_c01_tsqa_017: m_080, m_061, m_077
+  locomo_c01_tsqa_018: m_089, m_080, m_088
+  locomo_c01_tsqa_019: m_108, m_167, m_066
+  locomo_c01_tsqa_020: m_098, m_096, m_025
+
+Oracle Cache
+  locomo_c01_tsqa_001: m_003
+  locomo_c01_tsqa_002: m_012
+  locomo_c01_tsqa_003: m_009, m_011
+  locomo_c01_tsqa_004: m_026
+  locomo_c01_tsqa_005: m_005
+  locomo_c01_tsqa_006: m_019
+  locomo_c01_tsqa_007: m_025
+  locomo_c01_tsqa_008: m_032, m_048
+  locomo_c01_tsqa_009: m_036
+  locomo_c01_tsqa_010: m_046
+  locomo_c01_tsqa_011: m_048
+  locomo_c01_tsqa_012: m_048, m_061
+  locomo_c01_tsqa_013: m_063
+  locomo_c01_tsqa_014: m_011, m_071
+  locomo_c01_tsqa_015: m_040, m_073
+  locomo_c01_tsqa_016: m_012, m_018, m_080, m_175
+  locomo_c01_tsqa_017: m_080
+  locomo_c01_tsqa_018: m_089
+  locomo_c01_tsqa_019: m_064, m_108, m_167
+  locomo_c01_tsqa_020: m_066, m_098
+
+JSON log: /home/yanghaotong/premem/code/code/outputs/locomo_time-sliced_qwen_vllm_bge_hybrid_top3_cuda2_limit20.json
+Trace log: /home/yanghaotong/premem/code/code/outputs/locomo_time-sliced_qwen_vllm_bge_hybrid_top3_cuda2_limit20.trace.md
