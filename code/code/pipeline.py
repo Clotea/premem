@@ -1,0 +1,936 @@
+from __future__ import annotations
+
+from time import perf_counter
+from typing import Any, Dict, List, Mapping, Optional, Sequence
+
+from .gap_reasoning import build_prepared_context, verify_prepared_context
+from .graph_store import (
+    EDGE_SIMILAR_TO,
+    EDGE_TEMPORAL_NEXT,
+    GraphStore,
+    build_memory_graph,
+)
+from .predictors import MemoryNeedPredictor
+from .utils import (
+    MemoryNode,
+    Prediction,
+    Sample,
+    Turn,
+    WorkingCache,
+    average,
+    compute_activation_metrics,
+    estimate_cost,
+    estimate_importance,
+    extract_entities,
+    extract_keywords,
+    f1_score,
+    faithfulness,
+    infer_memory_type,
+    bleu1_score,
+    locomo_answer_f1,
+    overlap_score,
+    pseudo_judge,
+    rouge_l,
+    seeded_pick,
+    truncate,
+)
+from .vllm_client import VLLMClient, VLLMError
+
+
+METHODS = [
+    "Random Cache",
+    "Recency Cache",
+    "Reactive Vector Retrieval",
+    "Reactive Graph Retrieval",
+    "LLM-Predict Cache Only",
+    "Pre-query Prepared + Reader",
+    "LLM-Predict + Fallback",
+    "Oracle Cache",
+]
+
+
+def memory_writer(history: Sequence[Turn]) -> List[MemoryNode]:
+    memories: List[MemoryNode] = []
+    for turn in history:
+        raw_memories = turn.memories or [_memory_from_turn(turn)]
+        for raw in raw_memories:
+            memory_id = f"m_{len(memories) + 1:03d}"
+            content = str(raw.get("content") or f"{turn.speaker}: {turn.text}")
+            summary = str(raw.get("summary") or truncate(content))
+            keywords = list(raw.get("keywords") or extract_keywords(content, 10))
+            entities = list(raw.get("entities") or extract_entities(content))
+            memories.append(
+                MemoryNode(
+                    id=memory_id,
+                    memory_type=str(raw.get("type") or infer_memory_type(content)),
+                    content=content,
+                    summary=summary,
+                    keywords=[str(item) for item in keywords],
+                    entities=[str(item) for item in entities],
+                    segment_id=turn.segment_id,
+                    source_turn_id=turn.id,
+                    timestamp=turn.timestamp,
+                    importance=float(raw.get("importance") or estimate_importance(content)),
+                )
+            )
+    return memories
+
+
+def insert_cache(
+    cache_id: str,
+    budget: int,
+    prediction: Prediction,
+    memory_nodes: Sequence[MemoryNode],
+    graph: GraphStore,
+) -> WorkingCache:
+    memory_by_id = {memory.id: memory for memory in memory_nodes}
+    memory_ids: List[str] = []
+    for item in prediction.activated_memory_ids:
+        if item.id in memory_by_id and item.id not in memory_ids:
+            memory_ids.append(item.id)
+        if len(memory_ids) >= budget:
+            break
+    summaries = [memory_by_id[memory_id].summary for memory_id in memory_ids]
+    return WorkingCache(
+        cache_id=cache_id,
+        budget=budget,
+        memory_ids=memory_ids,
+        summaries=summaries,
+        local_subgraph=graph.local_subgraph(memory_ids),
+        prediction=prediction,
+        metadata={"cache_inserted": True},
+    )
+
+ 
+def verify_cache(
+    query: str,
+    cache: WorkingCache,
+    memory_nodes: Sequence[MemoryNode],
+    threshold: float = 0.12,
+    top_k: Optional[int] = None,
+    llm_client: Optional[VLLMClient] = None,
+    config: Optional[Mapping[str, Any]] = None,
+) -> Dict[str, Any]:
+    memory_by_id = {memory.id: memory for memory in memory_nodes}
+    prepared_context = cache.metadata.get("prepared_context")
+    if prepared_context and config is not None:
+        verifier = verify_prepared_context(query, prepared_context, llm_client, config)
+        if verifier["decision"] in {"use", "partial_use"}:
+            selected_ids = [
+                memory_id
+                for memory_id in verifier.get("selected_memory_ids", [])
+                if memory_id in memory_by_id
+            ]
+            if top_k is not None and top_k > 0:
+                selected_ids = selected_ids[:top_k]
+            memories = [memory_by_id[memory_id] for memory_id in selected_ids]
+            return {
+                "use_cache": bool(memories),
+                "sufficient": bool(memories),
+                "selected_memory_ids": selected_ids,
+                "activated_memory_ids": list(prepared_context.get("memory_ids", cache.memory_ids)),
+                "memories": memories,
+                "scores": list(verifier.get("scores") or []),
+                "verifier": verifier,
+                "prepared_context_id": prepared_context.get("context_package_id"),
+            }
+
+    scored = []
+    for memory_id in cache.memory_ids:
+        memory = memory_by_id.get(memory_id)
+        if memory is None:
+            continue
+        score = overlap_score(query, memory)
+        if score >= threshold:
+            scored.append({"memory": memory, "score": score})
+    scored.sort(key=lambda item: item["score"], reverse=True)
+    if top_k is not None and top_k > 0:
+        scored = scored[:top_k]
+    memories = [item["memory"] for item in scored]
+    return {
+        "use_cache": bool(memories),
+        "sufficient": bool(memories),
+        "selected_memory_ids": [memory.id for memory in memories],
+        "activated_memory_ids": list(cache.memory_ids),
+        "memories": memories,
+        "scores": [
+            {"id": item["memory"].id, "score": round(float(item["score"]), 3)}
+            for item in scored
+        ],
+        "verifier": {
+            "decision": "use" if memories else "fallback",
+            "confidence": 0.0,
+            "reason": "Lexical cache verifier fallback.",
+            "selected_memory_ids": [memory.id for memory in memories],
+            "provider": "lexical",
+        },
+        "prepared_context_id": None,
+    }
+
+
+def vector_retrieve(query: str, memory_nodes: Sequence[MemoryNode], top_k: int) -> List[MemoryNode]:
+    ranked = sorted(
+        ((overlap_score(query, memory), memory) for memory in memory_nodes),
+        key=lambda item: item[0],
+        reverse=True,
+    )
+    return [memory for _score, memory in ranked[:top_k]]
+
+
+def graph_retrieve(
+    query: str,
+    graph: GraphStore,
+    memory_nodes: Sequence[MemoryNode],
+    top_k: int,
+) -> List[MemoryNode]:
+    boosts: Dict[str, float] = {}
+    for edge in graph.edges:
+        if edge.edge_type in {EDGE_SIMILAR_TO, EDGE_TEMPORAL_NEXT}:
+            boosts[edge.source] = boosts.get(edge.source, 0.0) + 0.03
+            boosts[edge.target] = boosts.get(edge.target, 0.0) + 0.03
+    ranked = sorted(
+        ((overlap_score(query, memory) + boosts.get(memory.id, 0.0), memory) for memory in memory_nodes),
+        key=lambda item: item[0],
+        reverse=True,
+    )
+    return [memory for _score, memory in ranked[:top_k]]
+
+
+def fallback_retrieve(
+    query: str,
+    graph: GraphStore,
+    memory_nodes: Sequence[MemoryNode],
+    config: Mapping[str, Any],
+) -> List[MemoryNode]:
+    top_k = int(config.get("retrieval_top_k") or config.get("retrievalTopK") or 3)
+    retriever = str(config.get("fallback_retriever") or config.get("fallbackRetriever") or "vector")
+    if retriever == "graph":
+        return graph_retrieve(query, graph, memory_nodes, top_k)
+    return vector_retrieve(query, memory_nodes, top_k)
+
+
+def generate_answer(
+    query: str,
+    memories: Sequence[MemoryNode],
+    llm_client: Optional[VLLMClient] = None,
+    config: Optional[Mapping[str, Any]] = None,
+) -> str:
+    config = config or {}
+    llm_config = dict(config.get("llm") or {})
+    use_vllm = bool(config.get("answer_with_vllm") or llm_config.get("use_for_answer", False))
+    if use_vllm and llm_client is not None and memories:
+        context = "\n".join(f"- {memory.summary}" for memory in memories)
+        messages = [
+            {
+                "role": "system",
+                "content": "Answer the user question using only the supplied memory context. Be concise.",
+            },
+            {
+                "role": "user",
+                "content": f"Memory context:\n{context}\n\nQuestion: {query}",
+            },
+        ]
+        try:
+            answer, _usage = llm_client.chat(messages, temperature=0.0, max_tokens=256)
+            if answer.strip():
+                return answer.strip()
+        except VLLMError:
+            if not bool(llm_config.get("fallback_to_heuristic", True)):
+                raise
+
+    if not memories:
+        return f"No verified memory was found for: {query}"
+    return "Based on memory: " + " ".join(memory.summary for memory in memories)
+
+
+def generate_reader_answer(
+    query: str,
+    memories: Sequence[MemoryNode],
+    llm_client: Optional[VLLMClient] = None,
+    config: Optional[Mapping[str, Any]] = None,
+) -> str:
+    """Universal downstream QA reader over pre-query prepared memories."""
+    config = config or {}
+    reader_config = dict(config.get("qa_reader") or {})
+    if not memories:
+        return "No information available."
+
+    if llm_client is None:
+        return " ".join(memory.summary for memory in memories)
+
+    max_memories = int(reader_config.get("max_memories") or 12)
+    sorted_memories = sorted(memories, key=lambda item: item.timestamp)[:max_memories]
+    context_lines = []
+    for memory in sorted_memories:
+        context_lines.append(
+            "[{id} | turn={turn} | time={time}] {content}".format(
+                id=memory.id,
+                turn=memory.source_turn_id,
+                time=memory.timestamp,
+                content=memory.content,
+            )
+        )
+    context = "\n".join(context_lines)
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are the downstream QA reader for a pre-query memory system. "
+                "Use only the supplied prepared memories. Return only the shortest "
+                "answer phrase or sentence. Copy exact wording from the memories "
+                "when possible. If the memories do not contain the answer, return "
+                "\"No information available.\""
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                "Prepared memories:\n"
+                f"{context}\n\n"
+                f"Question: {query}\n\n"
+                "Answer:"
+            ),
+        },
+    ]
+    try:
+        answer, _usage = llm_client.chat(
+            messages,
+            temperature=float(reader_config.get("temperature") or 0.0),
+            max_tokens=int(reader_config.get("max_tokens") or 128),
+        )
+        answer = answer.strip()
+        if answer:
+            if "ANSWER:" in answer:
+                answer = answer.rsplit("ANSWER:", 1)[-1].strip()
+            return answer
+    except VLLMError:
+        if not bool(reader_config.get("fallback_to_heuristic", True)):
+            raise
+    return " ".join(memory.summary for memory in memories)
+
+
+def label_gold_evidence(
+    evidence_terms: Sequence[str],
+    evidence_turn_ids: Sequence[str],
+    memory_nodes: Sequence[MemoryNode],
+) -> List[str]:
+    turn_ids = set(evidence_turn_ids or [])
+    if turn_ids:
+        return [memory.id for memory in memory_nodes if memory.source_turn_id in turn_ids]
+
+    terms = set()
+    for term in evidence_terms or []:
+        terms.update(extract_keywords(term, 10))
+    if not terms:
+        return []
+
+    evidence = []
+    for memory in memory_nodes:
+        memory_terms = set(extract_keywords(memory.searchable_text(), 30))
+        if len(memory_terms & terms) >= 2:
+            evidence.append(memory.id)
+    return evidence
+
+
+def run_evaluation(
+    samples: Sequence[Sample],
+    config: Mapping[str, Any],
+    predictor: MemoryNeedPredictor,
+    llm_client: Optional[VLLMClient] = None,
+) -> List[Dict[str, Any]]:
+    results: Dict[str, List[Dict[str, Any]]] = {method: [] for method in METHODS}
+    context_cache: Dict[str, Dict[str, Any]] = {}
+
+    total_samples = len(samples)
+    show_progress = bool(config.get("show_progress", True))
+    progress_bar = None
+    if show_progress:
+        try:
+            from tqdm.auto import tqdm  # type: ignore
+
+            progress_bar = tqdm(
+                total=total_samples,
+                desc="LoCoMo",
+                unit="sample",
+                dynamic_ncols=True,
+            )
+        except ImportError:
+            progress_bar = None
+
+    for index, sample in enumerate(samples, start=1):
+        if progress_bar is not None:
+            progress_bar.set_postfix_str(f"running {sample.id}", refresh=True)
+        elif show_progress:
+            print(
+                f"[eval] start {index}/{total_samples} sample={sample.id} history_turns={len(sample.history)}",
+                flush=True,
+            )
+        context_key = sample.history_cache_key or sample.id
+        context = context_cache.get(context_key)
+        if context is None:
+            memory_nodes = memory_writer(sample.history)
+            graph = build_memory_graph(
+                memory_nodes,
+                sample.history,
+                similarity_threshold=float(config.get("similarity_threshold") or config.get("similarityThreshold") or 0.28),
+            )
+            budget = int(config.get("cache_budget") or config.get("cacheBudget") or 3)
+            prediction = predictor.predict(sample.history, memory_nodes, graph, budget)
+            cache = insert_cache(
+                cache_id=f"cache_{context_key}",
+                budget=budget,
+                prediction=prediction,
+                memory_nodes=memory_nodes,
+                graph=graph,
+            )
+            gap_config = dict(config.get("gap_reasoning") or {})
+            if bool(gap_config.get("enabled", True)):
+                prepared_context = build_prepared_context(
+                    context_key=context_key,
+                    history=sample.history,
+                    memory_nodes=memory_nodes,
+                    graph=graph,
+                    prediction=prediction,
+                    llm_client=llm_client,
+                    config=config,
+                )
+                cache.metadata["prepared_context"] = prepared_context
+            context = {"memory_nodes": memory_nodes, "graph": graph, "cache": cache}
+            context_cache[context_key] = context
+
+        memory_nodes = context["memory_nodes"]
+        graph = context["graph"]
+        cache = context["cache"]
+        budget = int(config.get("cache_budget") or config.get("cacheBudget") or 3)
+        evidence = label_gold_evidence(
+            sample.evidence_terms,
+            sample.gold_evidence_turn_ids,
+            memory_nodes,
+        )
+        ground_truth = build_ground_truth_trace(sample, memory_nodes, evidence)
+
+        random_ids = seeded_pick([memory.id for memory in memory_nodes], budget, int(config.get("random_seed") or config.get("randomSeed") or 7))
+        _evaluate_cache_method("Random Cache", sample, memory_nodes, random_ids, evidence, config, results, llm_client)
+
+        recency_ids = [
+            memory.id
+            for memory in sorted(memory_nodes, key=lambda item: item.timestamp, reverse=True)[:budget]
+        ]
+        _evaluate_cache_method("Recency Cache", sample, memory_nodes, recency_ids, evidence, config, results, llm_client)
+
+        retrieval_top_k = int(config.get("retrieval_top_k") or config.get("retrievalTopK") or 3)
+        retrieval_start = perf_counter()
+        vector_selected = vector_retrieve(sample.question, memory_nodes, retrieval_top_k)
+        vector_retrieval_latency_ms = _elapsed_ms(retrieval_start)
+        _evaluate_retrieval_method(
+            method="Reactive Vector Retrieval",
+            sample=sample,
+            selected=vector_selected,
+            activated=None,
+            evidence=evidence,
+            fallback_used=True,
+            idle_prediction_used=False,
+            results=results,
+            config=config,
+            llm_client=llm_client,
+            query_retrieval_latency_ms=vector_retrieval_latency_ms,
+        )
+
+        retrieval_start = perf_counter()
+        graph_selected = graph_retrieve(sample.question, graph, memory_nodes, retrieval_top_k)
+        graph_retrieval_latency_ms = _elapsed_ms(retrieval_start)
+        _evaluate_retrieval_method(
+            method="Reactive Graph Retrieval",
+            sample=sample,
+            selected=graph_selected,
+            activated=None,
+            evidence=evidence,
+            fallback_used=True,
+            idle_prediction_used=False,
+            results=results,
+            config=config,
+            llm_client=llm_client,
+            query_retrieval_latency_ms=graph_retrieval_latency_ms,
+        )
+
+        retrieval_start = perf_counter()
+        verified = verify_cache(
+            sample.question,
+            cache,
+            memory_nodes,
+            threshold=float(config.get("verifier_threshold") or config.get("verifierThreshold") or 0.12),
+            llm_client=llm_client,
+            config=config,
+        )
+        verifier_retrieval_latency_ms = _elapsed_ms(retrieval_start)
+        proactive_activation = compute_activation_metrics(
+            verified.get("activated_memory_ids", cache.memory_ids),
+            evidence,
+        )
+        cache_only_trace = build_llm_trace(
+            sample=sample,
+            memory_nodes=memory_nodes,
+            ground_truth=ground_truth,
+            cache=cache,
+            verified=verified,
+            selected=verified["memories"],
+            final_method="cache_only",
+            fallback_used=False,
+            final_metrics=compute_activation_metrics(
+                [memory.id for memory in verified["memories"]],
+                evidence,
+            ),
+            proactive_metrics=proactive_activation,
+        )
+        _evaluate_retrieval_method(
+            method="LLM-Predict Cache Only",
+            sample=sample,
+            selected=verified["memories"],
+            activated=None,
+            evidence=evidence,
+            fallback_used=False,
+            idle_prediction_used=True,
+            results=results,
+            config=config,
+            llm_client=llm_client,
+            extra={
+                "prepared_context_id": verified.get("prepared_context_id"),
+                "verifier": verified.get("verifier"),
+                "prepared_context": cache.metadata.get("prepared_context"),
+                "proactive_precision": proactive_activation["precision"],
+                "proactive_recall": proactive_activation["recall"],
+                "proactive_hit_rate": proactive_activation["hit_rate"],
+                "proactive_full_cover_rate": proactive_activation["full_cover_rate"],
+                "proactive_wasted_rate": proactive_activation["wasted_rate"],
+                "trace": cache_only_trace,
+            },
+            query_retrieval_latency_ms=verifier_retrieval_latency_ms,
+        )
+
+        retrieval_start = perf_counter()
+        memory_by_id = {memory.id: memory for memory in memory_nodes}
+        prepared_context = cache.metadata.get("prepared_context") or {}
+        prepared_ids = [
+            memory_id
+            for memory_id in prepared_context.get("memory_ids", cache.memory_ids)
+            if memory_id in memory_by_id
+        ]
+        prepared_selected = [memory_by_id[memory_id] for memory_id in prepared_ids]
+        prequery_retrieval_latency_ms = _elapsed_ms(retrieval_start)
+        prepared_metrics = compute_activation_metrics(prepared_ids, evidence)
+        prequery_trace = build_llm_trace(
+            sample=sample,
+            memory_nodes=memory_nodes,
+            ground_truth=ground_truth,
+            cache=cache,
+            verified=verified,
+            selected=prepared_selected,
+            final_method="prequery_prepared_reader",
+            fallback_used=False,
+            final_metrics=prepared_metrics,
+            proactive_metrics=prepared_metrics,
+        )
+        _evaluate_retrieval_method(
+            method="Pre-query Prepared + Reader",
+            sample=sample,
+            selected=prepared_selected,
+            activated=prepared_ids,
+            evidence=evidence,
+            fallback_used=False,
+            idle_prediction_used=True,
+            results=results,
+            config=config,
+            llm_client=llm_client,
+            answer_mode="qa_reader",
+            extra={
+                "prepared_context_id": verified.get("prepared_context_id"),
+                "verifier": verified.get("verifier"),
+                "prepared_context": prepared_context,
+                "proactive_precision": prepared_metrics["precision"],
+                "proactive_recall": prepared_metrics["recall"],
+                "proactive_hit_rate": prepared_metrics["hit_rate"],
+                "proactive_full_cover_rate": prepared_metrics["full_cover_rate"],
+                "proactive_wasted_rate": prepared_metrics["wasted_rate"],
+                "uses_query_for_retrieval": False,
+                "reader_uses_query": True,
+                "verifier_ablation_available": bool((verified.get("verifier") or {}).get("selected_memory_ids")),
+                "trace": prequery_trace,
+            },
+            query_retrieval_latency_ms=prequery_retrieval_latency_ms,
+        )
+
+        fallback_retrieval_latency_ms = 0.0
+        if verified["sufficient"]:
+            selected = verified["memories"]
+        else:
+            retrieval_start = perf_counter()
+            selected = fallback_retrieve(
+                sample.question,
+                graph,
+                memory_nodes,
+                config,
+            )
+            fallback_retrieval_latency_ms = _elapsed_ms(retrieval_start)
+        fallback_trace = build_llm_trace(
+            sample=sample,
+            memory_nodes=memory_nodes,
+            ground_truth=ground_truth,
+            cache=cache,
+            verified=verified,
+            selected=selected,
+            final_method="cache_plus_fallback",
+            fallback_used=not verified["sufficient"],
+            final_metrics=compute_activation_metrics(
+                [memory.id for memory in selected],
+                evidence,
+            ),
+            proactive_metrics=proactive_activation,
+        )
+        _evaluate_retrieval_method(
+            method="LLM-Predict + Fallback",
+            sample=sample,
+            selected=selected,
+            activated=None,
+            evidence=evidence,
+            fallback_used=not verified["sufficient"],
+            idle_prediction_used=True,
+            results=results,
+            config=config,
+            llm_client=llm_client,
+            extra={
+                "prepared_context_id": verified.get("prepared_context_id"),
+                "verifier": verified.get("verifier"),
+                "prepared_context": cache.metadata.get("prepared_context"),
+                "proactive_precision": proactive_activation["precision"],
+                "proactive_recall": proactive_activation["recall"],
+                "proactive_hit_rate": proactive_activation["hit_rate"],
+                "proactive_full_cover_rate": proactive_activation["full_cover_rate"],
+                "proactive_wasted_rate": proactive_activation["wasted_rate"],
+                "trace": fallback_trace,
+            },
+            query_retrieval_latency_ms=verifier_retrieval_latency_ms + fallback_retrieval_latency_ms,
+        )
+
+        retrieval_start = perf_counter()
+        oracle_ids = evidence[:budget]
+        oracle_selected = [memory for memory in memory_nodes if memory.id in set(oracle_ids)]
+        oracle_retrieval_latency_ms = _elapsed_ms(retrieval_start)
+        _evaluate_retrieval_method(
+            method="Oracle Cache",
+            sample=sample,
+            selected=oracle_selected,
+            activated=oracle_ids,
+            evidence=evidence,
+            fallback_used=False,
+            idle_prediction_used=False,
+            results=results,
+            config=config,
+            llm_client=llm_client,
+            query_retrieval_latency_ms=oracle_retrieval_latency_ms,
+            extra={"oracle_uses_gold_evidence": True},
+        )
+
+        if show_progress:
+            final_ids = [memory.id for memory in selected]
+            verifier = verified.get("verifier") or {}
+            message = (
+                "[eval] done "
+                f"{index}/{total_samples} sample={sample.id} "
+                f"proactive_recall={proactive_activation['recall']:.3f} "
+                f"final_ids={','.join(final_ids) or '-'} "
+                f"verifier={verifier.get('provider', '-')}/{verifier.get('decision', '-')}"
+            )
+            if progress_bar is not None:
+                progress_bar.set_postfix_str(
+                    f"{sample.id} recall={proactive_activation['recall']:.3f} "
+                    f"verifier={verifier.get('provider', '-')}",
+                    refresh=False,
+                )
+                progress_bar.update(1)
+                progress_bar.write(message)
+            else:
+                print(message, flush=True)
+
+    if progress_bar is not None:
+        progress_bar.close()
+
+    return _summarize(results, int(config.get("cache_budget") or config.get("cacheBudget") or 3))
+
+
+def build_ground_truth_trace(
+    sample: Sample,
+    memory_nodes: Sequence[MemoryNode],
+    evidence_ids: Sequence[str],
+) -> Dict[str, Any]:
+    return {
+        "gold_answer": sample.answer,
+        "gold_evidence_turn_ids": list(sample.gold_evidence_turn_ids),
+        "gold_evidence_memory_ids": list(evidence_ids),
+        "gold_evidence_memories": memory_refs(evidence_ids, memory_nodes),
+        "evidence_terms": list(sample.evidence_terms),
+    }
+
+
+def build_llm_trace(
+    sample: Sample,
+    memory_nodes: Sequence[MemoryNode],
+    ground_truth: Mapping[str, Any],
+    cache: WorkingCache,
+    verified: Mapping[str, Any],
+    selected: Sequence[MemoryNode],
+    final_method: str,
+    fallback_used: bool,
+    final_metrics: Mapping[str, float],
+    proactive_metrics: Mapping[str, float],
+) -> Dict[str, Any]:
+    prepared_context = cache.metadata.get("prepared_context") or {}
+    predicted_ids = [item.id for item in cache.prediction.activated_memory_ids]
+    prepared_ids = list(prepared_context.get("memory_ids") or [])
+    verifier_selected_ids = list((verified.get("verifier") or {}).get("selected_memory_ids") or [])
+    final_ids = [memory.id for memory in selected]
+    return {
+        "sample": {
+            "sample_id": sample.id,
+            "history_cache_key": sample.history_cache_key,
+            "question": sample.question,
+            "metadata": sample.metadata,
+            "history_turn_count": len(sample.history),
+            "history_tail": [
+                {
+                    "turn_id": turn.id,
+                    "speaker": turn.speaker,
+                    "text": truncate(turn.text, 220),
+                    "segment_id": turn.segment_id,
+                    "timestamp": turn.timestamp,
+                }
+                for turn in sample.history[-5:]
+            ],
+        },
+        "ground_truth": dict(ground_truth),
+        "prediction": {
+            "predicted_future_intents": list(cache.prediction.predicted_future_intents),
+            "activated_memory_ids": [item.to_dict() for item in cache.prediction.activated_memory_ids],
+            "metadata": dict(cache.prediction.metadata),
+            "activated_memories": memory_refs(predicted_ids, memory_nodes),
+        },
+        "cache": {
+            "cache_id": cache.cache_id,
+            "budget": cache.budget,
+            "cache_memory_ids": list(cache.memory_ids),
+            "cache_memories": memory_refs(cache.memory_ids, memory_nodes),
+        },
+        "gap_reasoning": {
+            "context_package_id": prepared_context.get("context_package_id"),
+            "target_intent": prepared_context.get("target_intent"),
+            "possible_user_query": prepared_context.get("possible_user_query"),
+            "selected_paths": prepared_context.get("selected_paths", []),
+            "executed_paths": prepared_context.get("executed_paths", []),
+            "support_check": prepared_context.get("support_check", {}),
+            "gaps": prepared_context.get("gaps", []),
+            "repair_evidence": prepared_context.get("evidence", []),
+            "bindings": prepared_context.get("bindings", []),
+            "usable_claims": prepared_context.get("usable_claims", []),
+            "candidate_memory_ids": prepared_context.get("candidate_memory_ids", []),
+            "candidate_memories": memory_refs(prepared_context.get("candidate_memory_ids", []), memory_nodes),
+            "compression": prepared_context.get("compression", {}),
+            "prepared_memory_ids": prepared_ids,
+            "prepared_memories": memory_refs(prepared_ids, memory_nodes),
+            "summary": prepared_context.get("summary"),
+            "risk": prepared_context.get("risk"),
+        },
+        "verifier": {
+            **dict(verified.get("verifier") or {}),
+            "selected_memories": memory_refs(verifier_selected_ids, memory_nodes),
+            "scores": list(verified.get("scores") or []),
+        },
+        "final_selection": {
+            "method": final_method,
+            "fallback_used": fallback_used,
+            "selected_memory_ids": final_ids,
+            "selected_memories": memory_refs(final_ids, memory_nodes),
+            "metrics": dict(final_metrics),
+        },
+        "proactive_metrics": dict(proactive_metrics),
+    }
+
+
+def memory_refs(memory_ids: Sequence[str], memory_nodes: Sequence[MemoryNode]) -> List[Dict[str, Any]]:
+    by_id = {memory.id: memory for memory in memory_nodes}
+    refs: List[Dict[str, Any]] = []
+    for memory_id in memory_ids:
+        memory = by_id.get(memory_id)
+        if memory is None:
+            continue
+        refs.append(
+            {
+                "id": memory.id,
+                "source_turn_id": memory.source_turn_id,
+                "timestamp": memory.timestamp,
+                "segment_id": memory.segment_id,
+                "type": memory.memory_type,
+                "summary": memory.summary,
+                "content": truncate(memory.content, 400),
+                "keywords": list(memory.keywords),
+                "entities": list(memory.entities),
+                "importance": memory.importance,
+            }
+        )
+    return refs
+
+
+def _memory_from_turn(turn: Turn) -> Dict[str, Any]:
+    content = f"{turn.speaker}: {turn.text}"
+    return {
+        "type": infer_memory_type(content),
+        "content": content,
+        "summary": truncate(content),
+        "keywords": extract_keywords(content, 10),
+        "entities": extract_entities(content),
+        "importance": estimate_importance(content),
+    }
+
+
+def _elapsed_ms(start: float) -> float:
+    return (perf_counter() - start) * 1000.0
+
+
+def _evaluate_cache_method(
+    method: str,
+    sample: Sample,
+    memory_nodes: Sequence[MemoryNode],
+    cache_ids: Sequence[str],
+    evidence: Sequence[str],
+    config: Mapping[str, Any],
+    results: Dict[str, List[Dict[str, Any]]],
+    llm_client: Optional[VLLMClient],
+) -> None:
+    prediction = Prediction(predicted_future_intents=[], activated_memory_ids=[])
+    graph = GraphStore()
+    cache = insert_cache(
+        cache_id=f"{method.lower().replace(' ', '_')}_{sample.id}",
+        budget=len(cache_ids),
+        prediction=prediction,
+        memory_nodes=memory_nodes,
+        graph=graph,
+    )
+    cache.memory_ids = list(cache_ids)
+    cache.summaries = [
+        memory.summary for memory in memory_nodes if memory.id in set(cache_ids)
+    ]
+    retrieval_start = perf_counter()
+    verified = verify_cache(
+        sample.question,
+        cache,
+        memory_nodes,
+        threshold=float(config.get("verifier_threshold") or config.get("verifierThreshold") or 0.12),
+    )
+    query_retrieval_latency_ms = _elapsed_ms(retrieval_start)
+    _evaluate_retrieval_method(
+        method=method,
+        sample=sample,
+        selected=verified["memories"],
+        activated=list(cache_ids),
+        evidence=evidence,
+        fallback_used=False,
+        idle_prediction_used=False,
+        results=results,
+        config=config,
+        llm_client=llm_client,
+        query_retrieval_latency_ms=query_retrieval_latency_ms,
+    )
+
+
+def _evaluate_retrieval_method(
+    method: str,
+    sample: Sample,
+    selected: Sequence[MemoryNode],
+    activated: Optional[Sequence[str]],
+    evidence: Sequence[str],
+    fallback_used: bool,
+    idle_prediction_used: bool,
+    results: Dict[str, List[Dict[str, Any]]],
+    config: Mapping[str, Any],
+    llm_client: Optional[VLLMClient],
+    extra: Optional[Mapping[str, Any]] = None,
+    answer_mode: str = "default",
+    query_retrieval_latency_ms: Optional[float] = None,
+) -> None:
+    reader_config = dict(config.get("qa_reader") or {})
+    use_reader = answer_mode == "qa_reader" or (
+        answer_mode == "default" and bool(reader_config.get("use_for_all_methods", False))
+    )
+    effective_answer_mode = "qa_reader" if use_reader else "default"
+    if use_reader:
+        answer = generate_reader_answer(sample.question, selected, llm_client=llm_client, config=config)
+    else:
+        answer = generate_answer(sample.question, selected, llm_client=llm_client, config=config)
+    selected_ids = [memory.id for memory in selected]
+    activation = compute_activation_metrics(
+        activated if activated is not None else selected_ids,
+        evidence,
+    )
+    costs = estimate_cost(
+        history=sample.history,
+        query=sample.question,
+        memories=selected,
+        generated_answer=answer,
+        idle_prediction_used=idle_prediction_used,
+        fallback_used=fallback_used,
+    )
+    row = {
+        "sample_id": sample.id,
+        "precision": activation["precision"],
+        "recall": activation["recall"],
+        "hit_rate": activation["hit_rate"],
+        "full_cover_rate": activation["full_cover_rate"],
+        "wasted_rate": activation["wasted_rate"],
+        "fallback_rate": 1.0 if fallback_used else 0.0,
+        "f1": f1_score(answer, sample.answer),
+        "official_f1": locomo_answer_f1(answer, sample.answer, sample.metadata.get("category")),
+        "bleu1": bleu1_score(answer, sample.answer),
+        "rouge_l": rouge_l(answer, sample.answer),
+        "llm_judge": pseudo_judge(answer, sample.answer),
+        "faithfulness": faithfulness(answer, selected),
+        "query_retrieval_latency_ms": float(query_retrieval_latency_ms or 0.0),
+        "query_time_latency_ms": costs["query_time_latency_ms"],
+        "idle_time_cost": costs["idle_time_cost"],
+        "total_tokens": costs["total_tokens"],
+        "selected_memory_ids": selected_ids,
+        "selected_count": float(len(selected_ids)),
+        "generated_answer": answer,
+        "gold_answer": sample.answer,
+        "answer_mode": effective_answer_mode,
+    }
+    if extra:
+        row.update(dict(extra))
+    results[method].append(row)
+
+
+def _summarize(results: Mapping[str, Sequence[Mapping[str, Any]]], budget: int) -> List[Dict[str, Any]]:
+    summary = []
+    for method, rows in results.items():
+        summary.append(
+            {
+                "method": method,
+                "budget": budget,
+                "precision": average(rows, "precision"),
+                "recall": average(rows, "recall"),
+                "hit_rate": average(rows, "hit_rate"),
+                "full_cover_rate": average(rows, "full_cover_rate"),
+                "wasted_rate": average(rows, "wasted_rate"),
+                "fallback_rate": average(rows, "fallback_rate"),
+                "selected_count": average(rows, "selected_count"),
+                "f1": average(rows, "f1"),
+                "official_f1": average(rows, "official_f1"),
+                "bleu1": average(rows, "bleu1"),
+                "rouge_l": average(rows, "rouge_l"),
+                "llm_judge": average(rows, "llm_judge"),
+                "faithfulness": average(rows, "faithfulness"),
+                "query_retrieval_latency_ms": average(rows, "query_retrieval_latency_ms"),
+                "query_time_latency_ms": average(rows, "query_time_latency_ms"),
+                "idle_time_cost": average(rows, "idle_time_cost"),
+                "total_tokens": average(rows, "total_tokens"),
+                "samples": list(rows),
+            }
+        )
+    return summary

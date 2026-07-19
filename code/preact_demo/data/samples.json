@@ -1,0 +1,266 @@
+[
+  {
+    "id": "sample_acl_positioning",
+    "history": [
+      {
+        "id": "t_001",
+        "timestamp": 1,
+        "speaker": "user",
+        "segment_id": "seg_acl",
+        "segment_summary": "Planning a memory-agent paper submission.",
+        "text": "I want this memory-agent paper to target ACL main conference, not Findings.",
+        "memories": [
+          {
+            "type": "preference",
+            "content": "The user prefers ACL main conference over Findings for the memory-agent paper.",
+            "summary": "Target ACL main, not Findings.",
+            "keywords": ["ACL", "main", "Findings", "paper", "target"],
+            "entities": ["ACL", "Findings"],
+            "importance": 0.95
+          }
+        ]
+      },
+      {
+        "id": "t_002",
+        "timestamp": 2,
+        "speaker": "assistant",
+        "segment_id": "seg_acl",
+        "segment_summary": "Planning a memory-agent paper submission.",
+        "text": "Then the demo should highlight a clear novelty claim and compare against memory-agent baselines."
+      },
+      {
+        "id": "t_005",
+        "timestamp": 5,
+        "speaker": "user",
+        "segment_id": "seg_ui",
+        "segment_summary": "Unrelated UI preference.",
+        "text": "For the dashboard mockup, I prefer dark mode and compact cards.",
+        "memories": [
+          {
+            "type": "preference",
+            "content": "The user prefers dark mode and compact cards for dashboard mockups.",
+            "summary": "Dashboard UI preference: dark mode with compact cards.",
+            "keywords": ["dashboard", "dark", "mode", "compact", "cards"],
+            "entities": ["Dashboard"],
+            "importance": 0.42
+          }
+        ]
+      },
+      {
+        "id": "t_003",
+        "timestamp": 6,
+        "speaker": "user",
+        "segment_id": "seg_acl",
+        "segment_summary": "Planning a memory-agent paper submission.",
+        "text": "The key novelty is proactive memory activation before the next query arrives.",
+        "memories": [
+          {
+            "type": "fact",
+            "content": "The paper's key novelty is proactive memory activation before the next query arrives.",
+            "summary": "Novelty: activate useful memory before query time.",
+            "keywords": ["proactive", "memory", "activation", "query-time", "novelty"],
+            "entities": ["PreAct-Memory"],
+            "importance": 0.92
+          }
+        ]
+      },
+      {
+        "id": "t_004",
+        "timestamp": 7,
+        "speaker": "user",
+        "segment_id": "seg_baselines",
+        "segment_summary": "Choosing memory-system baselines.",
+        "text": "Compare with Mem0, A-MEM, MemORAI, SGMem, and reactive RAG baselines.",
+        "memories": [
+          {
+            "type": "task",
+            "content": "The demo should compare proactive memory activation with Mem0, A-MEM, MemORAI, SGMem, and reactive RAG baselines.",
+            "summary": "Baselines include Mem0, A-MEM, MemORAI, SGMem, and reactive RAG.",
+            "keywords": ["Mem0", "A-MEM", "MemORAI", "SGMem", "RAG", "baseline"],
+            "entities": ["Mem0", "A-MEM", "MemORAI", "SGMem", "RAG"],
+            "importance": 0.88
+          }
+        ]
+      }
+    ],
+    "question": "How should we position the demo for ACL main reviewers?",
+    "answer": "Position it as a lightweight PreAct-Memory prototype: the user targets ACL main, the novelty is predicting future memory needs during idle time, and the demo compares against Mem0, A-MEM, MemORAI, SGMem, and reactive RAG.",
+    "evidence_terms": ["ACL", "main", "proactive", "activation", "Mem0", "A-MEM", "MemORAI", "SGMem", "RAG"]
+  },
+  {
+    "id": "sample_latency_tradeoff",
+    "history": [
+      {
+        "id": "t_010",
+        "timestamp": 10,
+        "speaker": "user",
+        "segment_id": "seg_metrics",
+        "segment_summary": "Defining proactive-memory evaluation metrics.",
+        "text": "We need to separate query-time latency from total system cost.",
+        "memories": [
+          {
+            "type": "fact",
+            "content": "Evaluation must report query-time latency separately from total system cost.",
+            "summary": "Separate user-visible latency from total cost.",
+            "keywords": ["query-time", "latency", "total", "cost", "evaluation"],
+            "entities": ["Latency", "Cost"],
+            "importance": 0.9
+          }
+        ]
+      },
+      {
+        "id": "t_011",
+        "timestamp": 11,
+        "speaker": "assistant",
+        "segment_id": "seg_metrics",
+        "segment_summary": "Defining proactive-memory evaluation metrics.",
+        "text": "That matters because proactive activation shifts work into idle time."
+      },
+      {
+        "id": "t_014",
+        "timestamp": 14,
+        "speaker": "user",
+        "segment_id": "seg_photo",
+        "segment_summary": "Unrelated photo organization idea.",
+        "text": "Later, we may organize family photos by detected faces and events.",
+        "memories": [
+          {
+            "type": "event",
+            "content": "A later feature may organize family photos by detected faces and events.",
+            "summary": "Future idea: organize photos by faces and events.",
+            "keywords": ["photos", "faces", "events", "organization"],
+            "entities": ["Photos"],
+            "importance": 0.45
+          }
+        ]
+      },
+      {
+        "id": "t_012",
+        "timestamp": 15,
+        "speaker": "user",
+        "segment_id": "seg_metrics",
+        "segment_summary": "Defining proactive-memory evaluation metrics.",
+        "text": "Report activation precision, recall, hit rate, wasted activation rate, fallback rate, F1, and ROUGE-L.",
+        "memories": [
+          {
+            "type": "task",
+            "content": "The demo metrics should include activation precision, recall, hit rate, wasted activation rate, fallback rate, F1, and ROUGE-L.",
+            "summary": "Metrics: activation precision/recall/hit, wasted rate, fallback rate, F1, ROUGE-L.",
+            "keywords": ["precision", "recall", "hit", "wasted", "fallback", "F1", "ROUGE-L"],
+            "entities": ["F1", "ROUGE-L"],
+            "importance": 0.86
+          }
+        ]
+      },
+      {
+        "id": "t_013",
+        "timestamp": 16,
+        "speaker": "user",
+        "segment_id": "seg_cache",
+        "segment_summary": "Choosing cache budgets.",
+        "text": "For the first pass, use cache budgets B=3, 5, 10, and 20, but default to B=3 in the local demo.",
+        "memories": [
+          {
+            "type": "preference",
+            "content": "The first local demo should default to cache budget B=3 while later experiments can sweep B=3, 5, 10, and 20.",
+            "summary": "Default local cache budget is B=3.",
+            "keywords": ["cache", "budget", "B=3", "B=5", "B=10", "B=20"],
+            "entities": ["Cache"],
+            "importance": 0.76
+          }
+        ]
+      }
+    ],
+    "question": "What efficiency numbers should the first demo report?",
+    "answer": "It should report query-time latency separately from idle-time and total cost, plus token estimates, cache hit or fallback rate, and the configured cache budget such as B=3.",
+    "evidence_terms": ["query-time", "latency", "idle", "total", "cost", "fallback", "budget", "B=3"]
+  },
+  {
+    "id": "sample_fallback_safety",
+    "history": [
+      {
+        "id": "t_020",
+        "timestamp": 20,
+        "speaker": "user",
+        "segment_id": "seg_verifier",
+        "segment_summary": "Designing verifier and fallback behavior.",
+        "text": "The verifier must prevent wrong proactive activations from hurting answer quality.",
+        "memories": [
+          {
+            "type": "fact",
+            "content": "The verifier should block irrelevant proactive activations so they do not reduce answer quality.",
+            "summary": "Verifier blocks irrelevant cache entries.",
+            "keywords": ["verifier", "irrelevant", "cache", "quality", "activation"],
+            "entities": ["Verifier"],
+            "importance": 0.91
+          }
+        ]
+      },
+      {
+        "id": "t_021",
+        "timestamp": 21,
+        "speaker": "user",
+        "segment_id": "seg_verifier",
+        "segment_summary": "Designing verifier and fallback behavior.",
+        "text": "If the cache is insufficient, fallback to graph retrieval or vector retrieval.",
+        "memories": [
+          {
+            "type": "task",
+            "content": "If verified cache memories are insufficient, the system should fallback to graph or vector retrieval.",
+            "summary": "Fallback to retrieval when cache is insufficient.",
+            "keywords": ["fallback", "graph", "vector", "retrieval", "insufficient", "cache"],
+            "entities": ["Graph Retrieval", "Vector Retrieval"],
+            "importance": 0.89
+          }
+        ]
+      },
+      {
+        "id": "t_022",
+        "timestamp": 22,
+        "speaker": "assistant",
+        "segment_id": "seg_verifier",
+        "segment_summary": "Designing verifier and fallback behavior.",
+        "text": "The cache-only method is useful as an ablation, but fallback is the safer main method."
+      },
+      {
+        "id": "t_024",
+        "timestamp": 24,
+        "speaker": "user",
+        "segment_id": "seg_mobile",
+        "segment_summary": "Unrelated mobile UI note.",
+        "text": "The mobile prototype should use larger tap targets and a calmer color palette.",
+        "memories": [
+          {
+            "type": "preference",
+            "content": "The mobile prototype should use larger tap targets and a calmer color palette.",
+            "summary": "Mobile UI preference: large tap targets and calm colors.",
+            "keywords": ["mobile", "tap", "targets", "color", "palette"],
+            "entities": ["Mobile UI"],
+            "importance": 0.44
+          }
+        ]
+      },
+      {
+        "id": "t_023",
+        "timestamp": 25,
+        "speaker": "user",
+        "segment_id": "seg_graph",
+        "segment_summary": "Defining graph structure.",
+        "text": "Use MemoryNode, TurnNode, SegmentNode, EntityNode, plus mentions, belongs_to, derived_from, similar_to, and temporal_next edges.",
+        "memories": [
+          {
+            "type": "summary",
+            "content": "The heterogeneous graph uses MemoryNode, TurnNode, SegmentNode, EntityNode and mentions, belongs_to, derived_from, similar_to, temporal_next edges.",
+            "summary": "Graph schema has memory, turn, segment, entity nodes and five edge types.",
+            "keywords": ["MemoryNode", "TurnNode", "SegmentNode", "EntityNode", "mentions", "belongs_to", "derived_from", "similar_to", "temporal_next"],
+            "entities": ["MemoryNode", "TurnNode", "SegmentNode", "EntityNode"],
+            "importance": 0.78
+          }
+        ]
+      }
+    ],
+    "question": "Why do we need verifier plus fallback?",
+    "answer": "Verifier plus fallback keeps answer quality safe: the verifier rejects irrelevant cache activations, and if cache evidence is insufficient the system falls back to graph or vector retrieval.",
+    "evidence_terms": ["verifier", "irrelevant", "quality", "fallback", "graph", "vector", "retrieval", "insufficient"]
+  }
+]

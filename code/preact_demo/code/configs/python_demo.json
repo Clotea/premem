@@ -1,0 +1,43 @@
+{
+  "cache_budget": 3,
+  "retrieval_top_k": 3,
+  "fallback_retriever": "vector",
+  "verifier_threshold": 0.12,
+  "similarity_threshold": 0.28,
+  "random_seed": 7,
+  "predictor": "vllm",
+  "predictor_candidate_limit": 80,
+  "answer_with_vllm": false,
+  "embedding": {
+    "provider": "hash",
+    "dimensions": 256
+  },
+  "grounding": {
+    "mode": "embedding",
+    "activation_threshold": 0.08,
+    "candidates_per_hypothesis": 5
+  },
+  "memory_gap": {
+    "mode": "score",
+    "coverage_threshold": 0.18
+  },
+  "external_search": {
+    "enabled": false,
+    "source_types": ["web", "paper"],
+    "results_per_query": 2,
+    "max_queries_per_gap": 2,
+    "timeout": 8
+  },
+  "verifier": {
+    "mode": "embedding",
+    "threshold": 0.12,
+    "hypothesis_threshold": 0.12
+  },
+  "llm": {
+    "base_url": "http://127.0.0.1:8000/v1",
+    "model": "Qwen/Qwen2.5-7B-Instruct",
+    "timeout": 30,
+    "fallback_to_heuristic": true,
+    "use_for_answer": false
+  }
+}

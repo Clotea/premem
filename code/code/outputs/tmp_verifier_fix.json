@@ -1,0 +1,2544 @@
+[
+  {
+    "method": "Random Cache",
+    "budget": 3,
+    "precision": 0.3333333333333333,
+    "recall": 1.0,
+    "hit_rate": 1.0,
+    "wasted_rate": 0.6666666666666667,
+    "fallback_rate": 0.0,
+    "f1": 0.0,
+    "rouge_l": 0.0,
+    "llm_judge": 0.0,
+    "faithfulness": 0.958904109589041,
+    "query_time_latency_ms": 10.0,
+    "idle_time_cost": 0.0,
+    "total_tokens": 125.0,
+    "samples": [
+      {
+        "sample_id": "locomo_c01_tsqa_001",
+        "precision": 0.3333333333333333,
+        "recall": 1.0,
+        "hit_rate": 1.0,
+        "wasted_rate": 0.6666666666666667,
+        "fallback_rate": 0.0,
+        "f1": 0.0,
+        "rouge_l": 0.0,
+        "llm_judge": 0.0,
+        "faithfulness": 0.958904109589041,
+        "query_time_latency_ms": 10.0,
+        "idle_time_cost": 0.0,
+        "total_tokens": 125.0,
+        "selected_memory_ids": [
+          "m_003",
+          "m_002"
+        ]
+      }
+    ]
+  },
+  {
+    "method": "Recency Cache",
+    "budget": 3,
+    "precision": 0.3333333333333333,
+    "recall": 1.0,
+    "hit_rate": 1.0,
+    "wasted_rate": 0.6666666666666667,
+    "fallback_rate": 0.0,
+    "f1": 0.0,
+    "rouge_l": 0.0,
+    "llm_judge": 0.0,
+    "faithfulness": 0.958904109589041,
+    "query_time_latency_ms": 10.0,
+    "idle_time_cost": 0.0,
+    "total_tokens": 125.0,
+    "samples": [
+      {
+        "sample_id": "locomo_c01_tsqa_001",
+        "precision": 0.3333333333333333,
+        "recall": 1.0,
+        "hit_rate": 1.0,
+        "wasted_rate": 0.6666666666666667,
+        "fallback_rate": 0.0,
+        "f1": 0.0,
+        "rouge_l": 0.0,
+        "llm_judge": 0.0,
+        "faithfulness": 0.958904109589041,
+        "query_time_latency_ms": 10.0,
+        "idle_time_cost": 0.0,
+        "total_tokens": 125.0,
+        "selected_memory_ids": [
+          "m_003",
+          "m_002"
+        ]
+      }
+    ]
+  },
+  {
+    "method": "Reactive Vector Retrieval",
+    "budget": 3,
+    "precision": 0.3333333333333333,
+    "recall": 1.0,
+    "hit_rate": 1.0,
+    "wasted_rate": 0.6666666666666667,
+    "fallback_rate": 1.0,
+    "f1": 0.0,
+    "rouge_l": 0.0,
+    "llm_judge": 0.0,
+    "faithfulness": 0.968421052631579,
+    "query_time_latency_ms": 24.0,
+    "idle_time_cost": 0.0,
+    "total_tokens": 147.0,
+    "samples": [
+      {
+        "sample_id": "locomo_c01_tsqa_001",
+        "precision": 0.3333333333333333,
+        "recall": 1.0,
+        "hit_rate": 1.0,
+        "wasted_rate": 0.6666666666666667,
+        "fallback_rate": 1.0,
+        "f1": 0.0,
+        "rouge_l": 0.0,
+        "llm_judge": 0.0,
+        "faithfulness": 0.968421052631579,
+        "query_time_latency_ms": 24.0,
+        "idle_time_cost": 0.0,
+        "total_tokens": 147.0,
+        "selected_memory_ids": [
+          "m_003",
+          "m_002",
+          "m_001"
+        ]
+      }
+    ]
+  },
+  {
+    "method": "Reactive Graph Retrieval",
+    "budget": 3,
+    "precision": 0.3333333333333333,
+    "recall": 1.0,
+    "hit_rate": 1.0,
+    "wasted_rate": 0.6666666666666667,
+    "fallback_rate": 1.0,
+    "f1": 0.0,
+    "rouge_l": 0.0,
+    "llm_judge": 0.0,
+    "faithfulness": 0.968421052631579,
+    "query_time_latency_ms": 24.0,
+    "idle_time_cost": 0.0,
+    "total_tokens": 147.0,
+    "samples": [
+      {
+        "sample_id": "locomo_c01_tsqa_001",
+        "precision": 0.3333333333333333,
+        "recall": 1.0,
+        "hit_rate": 1.0,
+        "wasted_rate": 0.6666666666666667,
+        "fallback_rate": 1.0,
+        "f1": 0.0,
+        "rouge_l": 0.0,
+        "llm_judge": 0.0,
+        "faithfulness": 0.968421052631579,
+        "query_time_latency_ms": 24.0,
+        "idle_time_cost": 0.0,
+        "total_tokens": 147.0,
+        "selected_memory_ids": [
+          "m_003",
+          "m_002",
+          "m_001"
+        ]
+      }
+    ]
+  },
+  {
+    "method": "LLM-Predict Cache Only",
+    "budget": 3,
+    "precision": 1.0,
+    "recall": 1.0,
+    "hit_rate": 1.0,
+    "wasted_rate": 0.0,
+    "fallback_rate": 0.0,
+    "f1": 0.0,
+    "rouge_l": 0.0,
+    "llm_judge": 0.0,
+    "faithfulness": 0.9032258064516129,
+    "query_time_latency_ms": 8.0,
+    "idle_time_cost": 30.0,
+    "total_tokens": 113.0,
+    "samples": [
+      {
+        "sample_id": "locomo_c01_tsqa_001",
+        "precision": 1.0,
+        "recall": 1.0,
+        "hit_rate": 1.0,
+        "wasted_rate": 0.0,
+        "fallback_rate": 0.0,
+        "f1": 0.0,
+        "rouge_l": 0.0,
+        "llm_judge": 0.0,
+        "faithfulness": 0.9032258064516129,
+        "query_time_latency_ms": 8.0,
+        "idle_time_cost": 30.0,
+        "total_tokens": 113.0,
+        "selected_memory_ids": [
+          "m_003"
+        ],
+        "prepared_context_id": "ctx_locomo_c01_tsqa_001_through_d1_3",
+        "verifier": {
+          "decision": "use",
+          "confidence": 0.9,
+          "reason": "Memory m_003 directly answers the query by providing information about Caroline going to an LGBTQ support group.",
+          "selected_memory_ids": [
+            "m_003"
+          ],
+          "provider": "vllm",
+          "memory_candidates": [
+            {
+              "id": "m_002",
+              "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+              "source_turn_id": "D1:2",
+              "segment_id": "seg_locomo_c01_1",
+              "path_id": "P1",
+              "source": "activated_node",
+              "evidence_ids": [
+                "ev_001",
+                "ev_003",
+                "ev_005",
+                "ev_007"
+              ],
+              "repair_score": 0.065
+            },
+            {
+              "id": "m_003",
+              "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+              "source_turn_id": "D1:3",
+              "segment_id": "seg_locomo_c01_1",
+              "path_id": "P1",
+              "source": "activated_node",
+              "evidence_ids": [
+                "ev_002",
+                "ev_004",
+                "ev_006",
+                "ev_008"
+              ],
+              "repair_score": 0.0106
+            },
+            {
+              "id": "m_001",
+              "summary": "Caroline: Hey Mel! Good to see you! How have you been?",
+              "source_turn_id": "D1:1",
+              "segment_id": "seg_locomo_c01_1",
+              "path_id": "P1",
+              "source": "activated_node"
+            }
+          ],
+          "scores": [
+            {
+              "id": "m_003",
+              "score": 0.9229,
+              "llm_selected": true,
+              "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful."
+            },
+            {
+              "id": "m_001",
+              "score": 0.2188,
+              "llm_selected": false,
+              "summary": "Caroline: Hey Mel! Good to see you! How have you been?"
+            },
+            {
+              "id": "m_002",
+              "score": 0.2067,
+              "llm_selected": false,
+              "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?"
+            }
+          ]
+        },
+        "prepared_context": {
+          "context_package_id": "ctx_locomo_c01_tsqa_001_through_d1_3",
+          "intent_node": {
+            "node_id": "intent_locomo_c01_tsqa_001_through_d1_3",
+            "node_type": "IntentNode",
+            "content": "The user may continue the active segment.",
+            "possible_user_query": "The user may ask about recently mentioned decisions, entities, or metrics.",
+            "confidence": 0.99,
+            "required_support": [
+              "user goal",
+              "method definition",
+              "related work distinction",
+              "evidence"
+            ]
+          },
+          "target_intent": "The user may continue the active segment.",
+          "possible_user_query": "The user may ask about recently mentioned decisions, entities, or metrics.",
+          "confidence": 0.99,
+          "meta_path_library": [
+            {
+              "path_id": "P1",
+              "path": "Intent -> UserGoal -> Idea",
+              "purpose": "Recover the user's goal, method definition, and active idea."
+            },
+            {
+              "path_id": "P2",
+              "path": "Intent -> Paper -> Claim -> Evidence",
+              "purpose": "Check whether related-work or paper claims have evidence."
+            },
+            {
+              "path_id": "P3",
+              "path": "Intent -> Topic -> Paper -> Claim",
+              "purpose": "Locate representative methods or claims for the topic."
+            },
+            {
+              "path_id": "P4",
+              "path": "Claim -> Evidence",
+              "purpose": "Find direct evidence for claims needed by the future answer."
+            },
+            {
+              "path_id": "P5",
+              "path": "Claim -> contradicts -> Claim",
+              "purpose": "Look for conflicts, boundary claims, and distinctions."
+            },
+            {
+              "path_id": "P6",
+              "path": "Claim -> Gap",
+              "purpose": "Locate missing support, outdated facts, or coverage gaps."
+            }
+          ],
+          "selected_paths": [
+            {
+              "path_id": "P1",
+              "reason": "This path helps in recovering the user's goal, method definition, and active idea which aligns with the intent of the user as described in the dialogue."
+            }
+          ],
+          "executed_paths": [
+            {
+              "path_id": "P1",
+              "path": "Intent -> UserGoal -> Idea",
+              "selected_memory_ids": [
+                "m_002",
+                "m_003",
+                "m_001"
+              ],
+              "node_count": 15,
+              "edge_count": 18
+            }
+          ],
+          "activated_nodes": [
+            {
+              "id": "m_001",
+              "node_type": "MemoryNode",
+              "path_id": "P1",
+              "summary": "Caroline: Hey Mel! Good to see you! How have you been?",
+              "source_turn_id": "D1:1",
+              "segment_id": "seg_locomo_c01_1"
+            },
+            {
+              "id": "e_hey",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "Hey",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "e_mel",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "Mel",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "e_how",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "How",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "e_anything",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "Anything",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "m_003",
+              "node_type": "MemoryNode",
+              "path_id": "P1",
+              "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+              "source_turn_id": "D1:3",
+              "segment_id": "seg_locomo_c01_1"
+            },
+            {
+              "id": "D1:2",
+              "node_type": "TurnNode",
+              "path_id": "P1",
+              "summary": "Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+              "source_turn_id": null,
+              "segment_id": "seg_locomo_c01_1"
+            },
+            {
+              "id": "seg_locomo_c01_1",
+              "node_type": "SegmentNode",
+              "path_id": "P1",
+              "summary": "1:56 pm on 8 May, 2023",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "e_what",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "What",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "e_good",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "Good",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "D1:1",
+              "node_type": "TurnNode",
+              "path_id": "P1",
+              "summary": "Hey Mel! Good to see you! How have you been?",
+              "source_turn_id": null,
+              "segment_id": "seg_locomo_c01_1"
+            },
+            {
+              "id": "D1:3",
+              "node_type": "TurnNode",
+              "path_id": "P1",
+              "summary": "I went to a LGBTQ support group yesterday and it was so powerful.",
+              "source_turn_id": null,
+              "segment_id": "seg_locomo_c01_1"
+            },
+            {
+              "id": "e_caroline",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "Caroline",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "m_002",
+              "node_type": "MemoryNode",
+              "path_id": "P1",
+              "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+              "source_turn_id": "D1:2",
+              "segment_id": "seg_locomo_c01_1"
+            },
+            {
+              "id": "e_lgbtq",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "LGBTQ",
+              "source_turn_id": null,
+              "segment_id": null
+            }
+          ],
+          "support_check": {
+            "support_status": "partial",
+            "supported_claims": [
+              "The user may ask about recently mentioned decisions, entities, or metrics."
+            ],
+            "missing_support": [
+              "user goal",
+              "method definition",
+              "related work distinction",
+              "evidence"
+            ],
+            "confidence": 0.488,
+            "provider": "vllm"
+          },
+          "gaps": [
+            {
+              "gap_id": "gap_001",
+              "gap_type": "evidence_gap",
+              "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+              "missing_support": "user goal",
+              "priority": 0.8,
+              "repair_query": "user goal may active ask continue decisions definition distinction entities evidence mentioned"
+            },
+            {
+              "gap_id": "gap_002",
+              "gap_type": "definition_gap",
+              "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+              "missing_support": "method definition",
+              "priority": 0.8,
+              "repair_query": "user definition may method active ask continue decisions distinction entities evidence goal"
+            },
+            {
+              "gap_id": "gap_003",
+              "gap_type": "evidence_gap",
+              "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+              "missing_support": "related work distinction",
+              "priority": 0.8,
+              "repair_query": "user distinction may related work active ask continue decisions definition entities evidence"
+            },
+            {
+              "gap_id": "gap_004",
+              "gap_type": "evidence_gap",
+              "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+              "missing_support": "evidence",
+              "priority": 0.8,
+              "repair_query": "user evidence may active ask continue decisions definition distinction entities goal mentioned"
+            }
+          ],
+          "evidence": [
+            {
+              "evidence_id": "ev_001",
+              "candidate_gap_id": "gap_001",
+              "source_type": "memory",
+              "source_id": "m_002",
+              "chunk_id": "D1:2",
+              "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+              "score": 0.065,
+              "provenance": {
+                "memory_id": "m_002",
+                "turn_id": "D1:2",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            },
+            {
+              "evidence_id": "ev_002",
+              "candidate_gap_id": "gap_001",
+              "source_type": "memory",
+              "source_id": "m_003",
+              "chunk_id": "D1:3",
+              "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+              "score": 0.0106,
+              "provenance": {
+                "memory_id": "m_003",
+                "turn_id": "D1:3",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            },
+            {
+              "evidence_id": "ev_003",
+              "candidate_gap_id": "gap_002",
+              "source_type": "memory",
+              "source_id": "m_002",
+              "chunk_id": "D1:2",
+              "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+              "score": 0.065,
+              "provenance": {
+                "memory_id": "m_002",
+                "turn_id": "D1:2",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            },
+            {
+              "evidence_id": "ev_004",
+              "candidate_gap_id": "gap_002",
+              "source_type": "memory",
+              "source_id": "m_003",
+              "chunk_id": "D1:3",
+              "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+              "score": 0.0106,
+              "provenance": {
+                "memory_id": "m_003",
+                "turn_id": "D1:3",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            },
+            {
+              "evidence_id": "ev_005",
+              "candidate_gap_id": "gap_003",
+              "source_type": "memory",
+              "source_id": "m_002",
+              "chunk_id": "D1:2",
+              "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+              "score": 0.065,
+              "provenance": {
+                "memory_id": "m_002",
+                "turn_id": "D1:2",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            },
+            {
+              "evidence_id": "ev_006",
+              "candidate_gap_id": "gap_003",
+              "source_type": "memory",
+              "source_id": "m_003",
+              "chunk_id": "D1:3",
+              "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+              "score": 0.0106,
+              "provenance": {
+                "memory_id": "m_003",
+                "turn_id": "D1:3",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            },
+            {
+              "evidence_id": "ev_007",
+              "candidate_gap_id": "gap_004",
+              "source_type": "memory",
+              "source_id": "m_002",
+              "chunk_id": "D1:2",
+              "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+              "score": 0.065,
+              "provenance": {
+                "memory_id": "m_002",
+                "turn_id": "D1:2",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            },
+            {
+              "evidence_id": "ev_008",
+              "candidate_gap_id": "gap_004",
+              "source_type": "memory",
+              "source_id": "m_003",
+              "chunk_id": "D1:3",
+              "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+              "score": 0.0106,
+              "provenance": {
+                "memory_id": "m_003",
+                "turn_id": "D1:3",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            }
+          ],
+          "bindings": [
+            {
+              "evidence_id": "ev_001",
+              "bind_to": "gap_001",
+              "binding_type": "supports",
+              "reason": "The conversation snippet mentions recent activities which can be used to clarify the user's recent decisions or entities."
+            }
+          ],
+          "usable_claims": [
+            {
+              "claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+              "gap_id": "gap_001",
+              "evidence": [
+                "ev_001"
+              ],
+              "status": "repaired"
+            }
+          ],
+          "summary": "Prepared context for predicted intent: The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']. Gaps: gap_001:evidence_gap:repaired; gap_002:definition_gap:open; gap_003:evidence_gap:open; gap_004:evidence_gap:open",
+          "risk": "Use only when the next query matches the predicted intent or asks about the claims, gaps, evidence, or distinctions prepared in this package.",
+          "memory_ids": [
+            "m_002",
+            "m_003",
+            "m_001"
+          ],
+          "metadata": {
+            "module": "future_intent_conditioned_gap_reasoning",
+            "path_count": 1,
+            "gap_count": 4,
+            "evidence_count": 8,
+            "binding_count": 1,
+            "llm_enabled": true
+          }
+        },
+        "proactive_precision": 0.3333333333333333,
+        "proactive_recall": 1.0,
+        "proactive_hit_rate": 1.0,
+        "proactive_wasted_rate": 0.6666666666666667,
+        "trace": {
+          "sample": {
+            "sample_id": "locomo_c01_tsqa_001",
+            "history_cache_key": "locomo_c01_tsqa_001_through_D1:3",
+            "question": "When did Caroline go to the LGBTQ support group?",
+            "metadata": {
+              "dataset": "locomo",
+              "eval_mode": "time-sliced",
+              "conversation_id": "locomo_c01",
+              "category": 2,
+              "history_turn_count": 3,
+              "full_history_turn_count": 419,
+              "slice_end_index": 3,
+              "slice_end_turn_id": "D1:3",
+              "slice_reason": "through_latest_gold_evidence"
+            },
+            "history_turn_count": 3,
+            "history_tail": [
+              {
+                "turn_id": "D1:1",
+                "speaker": "Caroline",
+                "text": "Hey Mel! Good to see you! How have you been?",
+                "segment_id": "seg_locomo_c01_1",
+                "timestamp": 1
+              },
+              {
+                "turn_id": "D1:2",
+                "speaker": "Melanie",
+                "text": "Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "segment_id": "seg_locomo_c01_1",
+                "timestamp": 2
+              },
+              {
+                "turn_id": "D1:3",
+                "speaker": "Caroline",
+                "text": "I went to a LGBTQ support group yesterday and it was so powerful.",
+                "segment_id": "seg_locomo_c01_1",
+                "timestamp": 3
+              }
+            ]
+          },
+          "ground_truth": {
+            "gold_answer": "7 May 2023",
+            "gold_evidence_turn_ids": [
+              "D1:3"
+            ],
+            "gold_evidence_memory_ids": [
+              "m_003"
+            ],
+            "gold_evidence_memories": [
+              {
+                "id": "m_003",
+                "source_turn_id": "D1:3",
+                "timestamp": 3,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "event",
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "keywords": [
+                  "group",
+                  "lgbtq",
+                  "powerful",
+                  "support",
+                  "went",
+                  "yesterday"
+                ],
+                "entities": [
+                  "LGBTQ"
+                ],
+                "importance": 0.53
+              }
+            ],
+            "evidence_terms": [
+              "2023",
+              "caroline",
+              "group",
+              "lgbtq",
+              "may",
+              "support"
+            ]
+          },
+          "prediction": {
+            "predicted_future_intents": [
+              "The user may continue the active segment.",
+              "The user may ask about recently mentioned decisions, entities, or metrics."
+            ],
+            "activated_memory_ids": [
+              {
+                "id": "m_002",
+                "reason": "Heuristic prediction from recent keyword/entity overlap, segment, importance, and recency.",
+                "confidence": 0.99
+              },
+              {
+                "id": "m_003",
+                "reason": "Heuristic prediction from recent keyword/entity overlap, segment, importance, and recency.",
+                "confidence": 0.99
+              },
+              {
+                "id": "m_001",
+                "reason": "Heuristic prediction from recent keyword/entity overlap, segment, importance, and recency.",
+                "confidence": 0.99
+              }
+            ],
+            "metadata": {
+              "provider": "heuristic"
+            },
+            "activated_memories": [
+              {
+                "id": "m_002",
+                "source_turn_id": "D1:2",
+                "timestamp": 2,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "fact",
+                "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "keywords": [
+                  "anything",
+                  "caroline",
+                  "good",
+                  "hey",
+                  "kids",
+                  "new",
+                  "see",
+                  "swamped",
+                  "work"
+                ],
+                "entities": [
+                  "Hey",
+                  "Caroline",
+                  "Good",
+                  "What",
+                  "Anything"
+                ],
+                "importance": 0.62
+              },
+              {
+                "id": "m_003",
+                "source_turn_id": "D1:3",
+                "timestamp": 3,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "event",
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "keywords": [
+                  "group",
+                  "lgbtq",
+                  "powerful",
+                  "support",
+                  "went",
+                  "yesterday"
+                ],
+                "entities": [
+                  "LGBTQ"
+                ],
+                "importance": 0.53
+              },
+              {
+                "id": "m_001",
+                "source_turn_id": "D1:1",
+                "timestamp": 1,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "fact",
+                "summary": "Caroline: Hey Mel! Good to see you! How have you been?",
+                "content": "Caroline: Hey Mel! Good to see you! How have you been?",
+                "keywords": [
+                  "good",
+                  "hey",
+                  "mel",
+                  "see"
+                ],
+                "entities": [
+                  "Hey",
+                  "Mel",
+                  "Good",
+                  "How"
+                ],
+                "importance": 0.47
+              }
+            ]
+          },
+          "cache": {
+            "cache_id": "cache_locomo_c01_tsqa_001_through_D1:3",
+            "budget": 3,
+            "cache_memory_ids": [
+              "m_002",
+              "m_003",
+              "m_001"
+            ],
+            "cache_memories": [
+              {
+                "id": "m_002",
+                "source_turn_id": "D1:2",
+                "timestamp": 2,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "fact",
+                "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "keywords": [
+                  "anything",
+                  "caroline",
+                  "good",
+                  "hey",
+                  "kids",
+                  "new",
+                  "see",
+                  "swamped",
+                  "work"
+                ],
+                "entities": [
+                  "Hey",
+                  "Caroline",
+                  "Good",
+                  "What",
+                  "Anything"
+                ],
+                "importance": 0.62
+              },
+              {
+                "id": "m_003",
+                "source_turn_id": "D1:3",
+                "timestamp": 3,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "event",
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "keywords": [
+                  "group",
+                  "lgbtq",
+                  "powerful",
+                  "support",
+                  "went",
+                  "yesterday"
+                ],
+                "entities": [
+                  "LGBTQ"
+                ],
+                "importance": 0.53
+              },
+              {
+                "id": "m_001",
+                "source_turn_id": "D1:1",
+                "timestamp": 1,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "fact",
+                "summary": "Caroline: Hey Mel! Good to see you! How have you been?",
+                "content": "Caroline: Hey Mel! Good to see you! How have you been?",
+                "keywords": [
+                  "good",
+                  "hey",
+                  "mel",
+                  "see"
+                ],
+                "entities": [
+                  "Hey",
+                  "Mel",
+                  "Good",
+                  "How"
+                ],
+                "importance": 0.47
+              }
+            ]
+          },
+          "gap_reasoning": {
+            "context_package_id": "ctx_locomo_c01_tsqa_001_through_d1_3",
+            "target_intent": "The user may continue the active segment.",
+            "possible_user_query": "The user may ask about recently mentioned decisions, entities, or metrics.",
+            "selected_paths": [
+              {
+                "path_id": "P1",
+                "reason": "This path helps in recovering the user's goal, method definition, and active idea which aligns with the intent of the user as described in the dialogue."
+              }
+            ],
+            "executed_paths": [
+              {
+                "path_id": "P1",
+                "path": "Intent -> UserGoal -> Idea",
+                "selected_memory_ids": [
+                  "m_002",
+                  "m_003",
+                  "m_001"
+                ],
+                "node_count": 15,
+                "edge_count": 18
+              }
+            ],
+            "support_check": {
+              "support_status": "partial",
+              "supported_claims": [
+                "The user may ask about recently mentioned decisions, entities, or metrics."
+              ],
+              "missing_support": [
+                "user goal",
+                "method definition",
+                "related work distinction",
+                "evidence"
+              ],
+              "confidence": 0.488,
+              "provider": "vllm"
+            },
+            "gaps": [
+              {
+                "gap_id": "gap_001",
+                "gap_type": "evidence_gap",
+                "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+                "missing_support": "user goal",
+                "priority": 0.8,
+                "repair_query": "user goal may active ask continue decisions definition distinction entities evidence mentioned"
+              },
+              {
+                "gap_id": "gap_002",
+                "gap_type": "definition_gap",
+                "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+                "missing_support": "method definition",
+                "priority": 0.8,
+                "repair_query": "user definition may method active ask continue decisions distinction entities evidence goal"
+              },
+              {
+                "gap_id": "gap_003",
+                "gap_type": "evidence_gap",
+                "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+                "missing_support": "related work distinction",
+                "priority": 0.8,
+                "repair_query": "user distinction may related work active ask continue decisions definition entities evidence"
+              },
+              {
+                "gap_id": "gap_004",
+                "gap_type": "evidence_gap",
+                "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+                "missing_support": "evidence",
+                "priority": 0.8,
+                "repair_query": "user evidence may active ask continue decisions definition distinction entities goal mentioned"
+              }
+            ],
+            "repair_evidence": [
+              {
+                "evidence_id": "ev_001",
+                "candidate_gap_id": "gap_001",
+                "source_type": "memory",
+                "source_id": "m_002",
+                "chunk_id": "D1:2",
+                "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "score": 0.065,
+                "provenance": {
+                  "memory_id": "m_002",
+                  "turn_id": "D1:2",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              },
+              {
+                "evidence_id": "ev_002",
+                "candidate_gap_id": "gap_001",
+                "source_type": "memory",
+                "source_id": "m_003",
+                "chunk_id": "D1:3",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "score": 0.0106,
+                "provenance": {
+                  "memory_id": "m_003",
+                  "turn_id": "D1:3",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              },
+              {
+                "evidence_id": "ev_003",
+                "candidate_gap_id": "gap_002",
+                "source_type": "memory",
+                "source_id": "m_002",
+                "chunk_id": "D1:2",
+                "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "score": 0.065,
+                "provenance": {
+                  "memory_id": "m_002",
+                  "turn_id": "D1:2",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              },
+              {
+                "evidence_id": "ev_004",
+                "candidate_gap_id": "gap_002",
+                "source_type": "memory",
+                "source_id": "m_003",
+                "chunk_id": "D1:3",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "score": 0.0106,
+                "provenance": {
+                  "memory_id": "m_003",
+                  "turn_id": "D1:3",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              },
+              {
+                "evidence_id": "ev_005",
+                "candidate_gap_id": "gap_003",
+                "source_type": "memory",
+                "source_id": "m_002",
+                "chunk_id": "D1:2",
+                "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "score": 0.065,
+                "provenance": {
+                  "memory_id": "m_002",
+                  "turn_id": "D1:2",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              },
+              {
+                "evidence_id": "ev_006",
+                "candidate_gap_id": "gap_003",
+                "source_type": "memory",
+                "source_id": "m_003",
+                "chunk_id": "D1:3",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "score": 0.0106,
+                "provenance": {
+                  "memory_id": "m_003",
+                  "turn_id": "D1:3",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              },
+              {
+                "evidence_id": "ev_007",
+                "candidate_gap_id": "gap_004",
+                "source_type": "memory",
+                "source_id": "m_002",
+                "chunk_id": "D1:2",
+                "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "score": 0.065,
+                "provenance": {
+                  "memory_id": "m_002",
+                  "turn_id": "D1:2",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              },
+              {
+                "evidence_id": "ev_008",
+                "candidate_gap_id": "gap_004",
+                "source_type": "memory",
+                "source_id": "m_003",
+                "chunk_id": "D1:3",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "score": 0.0106,
+                "provenance": {
+                  "memory_id": "m_003",
+                  "turn_id": "D1:3",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              }
+            ],
+            "bindings": [
+              {
+                "evidence_id": "ev_001",
+                "bind_to": "gap_001",
+                "binding_type": "supports",
+                "reason": "The conversation snippet mentions recent activities which can be used to clarify the user's recent decisions or entities."
+              }
+            ],
+            "usable_claims": [
+              {
+                "claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+                "gap_id": "gap_001",
+                "evidence": [
+                  "ev_001"
+                ],
+                "status": "repaired"
+              }
+            ],
+            "prepared_memory_ids": [
+              "m_002",
+              "m_003",
+              "m_001"
+            ],
+            "prepared_memories": [
+              {
+                "id": "m_002",
+                "source_turn_id": "D1:2",
+                "timestamp": 2,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "fact",
+                "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "keywords": [
+                  "anything",
+                  "caroline",
+                  "good",
+                  "hey",
+                  "kids",
+                  "new",
+                  "see",
+                  "swamped",
+                  "work"
+                ],
+                "entities": [
+                  "Hey",
+                  "Caroline",
+                  "Good",
+                  "What",
+                  "Anything"
+                ],
+                "importance": 0.62
+              },
+              {
+                "id": "m_003",
+                "source_turn_id": "D1:3",
+                "timestamp": 3,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "event",
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "keywords": [
+                  "group",
+                  "lgbtq",
+                  "powerful",
+                  "support",
+                  "went",
+                  "yesterday"
+                ],
+                "entities": [
+                  "LGBTQ"
+                ],
+                "importance": 0.53
+              },
+              {
+                "id": "m_001",
+                "source_turn_id": "D1:1",
+                "timestamp": 1,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "fact",
+                "summary": "Caroline: Hey Mel! Good to see you! How have you been?",
+                "content": "Caroline: Hey Mel! Good to see you! How have you been?",
+                "keywords": [
+                  "good",
+                  "hey",
+                  "mel",
+                  "see"
+                ],
+                "entities": [
+                  "Hey",
+                  "Mel",
+                  "Good",
+                  "How"
+                ],
+                "importance": 0.47
+              }
+            ],
+            "summary": "Prepared context for predicted intent: The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']. Gaps: gap_001:evidence_gap:repaired; gap_002:definition_gap:open; gap_003:evidence_gap:open; gap_004:evidence_gap:open",
+            "risk": "Use only when the next query matches the predicted intent or asks about the claims, gaps, evidence, or distinctions prepared in this package."
+          },
+          "verifier": {
+            "decision": "use",
+            "confidence": 0.9,
+            "reason": "Memory m_003 directly answers the query by providing information about Caroline going to an LGBTQ support group.",
+            "selected_memory_ids": [
+              "m_003"
+            ],
+            "provider": "vllm",
+            "memory_candidates": [
+              {
+                "id": "m_002",
+                "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "source_turn_id": "D1:2",
+                "segment_id": "seg_locomo_c01_1",
+                "path_id": "P1",
+                "source": "activated_node",
+                "evidence_ids": [
+                  "ev_001",
+                  "ev_003",
+                  "ev_005",
+                  "ev_007"
+                ],
+                "repair_score": 0.065
+              },
+              {
+                "id": "m_003",
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "source_turn_id": "D1:3",
+                "segment_id": "seg_locomo_c01_1",
+                "path_id": "P1",
+                "source": "activated_node",
+                "evidence_ids": [
+                  "ev_002",
+                  "ev_004",
+                  "ev_006",
+                  "ev_008"
+                ],
+                "repair_score": 0.0106
+              },
+              {
+                "id": "m_001",
+                "summary": "Caroline: Hey Mel! Good to see you! How have you been?",
+                "source_turn_id": "D1:1",
+                "segment_id": "seg_locomo_c01_1",
+                "path_id": "P1",
+                "source": "activated_node"
+              }
+            ],
+            "scores": [
+              {
+                "id": "m_003",
+                "score": 0.9229,
+                "llm_selected": true,
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful."
+              },
+              {
+                "id": "m_001",
+                "score": 0.2188,
+                "llm_selected": false,
+                "summary": "Caroline: Hey Mel! Good to see you! How have you been?"
+              },
+              {
+                "id": "m_002",
+                "score": 0.2067,
+                "llm_selected": false,
+                "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?"
+              }
+            ],
+            "selected_memories": [
+              {
+                "id": "m_003",
+                "source_turn_id": "D1:3",
+                "timestamp": 3,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "event",
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "keywords": [
+                  "group",
+                  "lgbtq",
+                  "powerful",
+                  "support",
+                  "went",
+                  "yesterday"
+                ],
+                "entities": [
+                  "LGBTQ"
+                ],
+                "importance": 0.53
+              }
+            ]
+          },
+          "final_selection": {
+            "method": "cache_only",
+            "fallback_used": false,
+            "selected_memory_ids": [
+              "m_003"
+            ],
+            "selected_memories": [
+              {
+                "id": "m_003",
+                "source_turn_id": "D1:3",
+                "timestamp": 3,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "event",
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "keywords": [
+                  "group",
+                  "lgbtq",
+                  "powerful",
+                  "support",
+                  "went",
+                  "yesterday"
+                ],
+                "entities": [
+                  "LGBTQ"
+                ],
+                "importance": 0.53
+              }
+            ],
+            "metrics": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "hit_rate": 1.0,
+              "wasted_rate": 0.0
+            }
+          },
+          "proactive_metrics": {
+            "precision": 0.3333333333333333,
+            "recall": 1.0,
+            "hit_rate": 1.0,
+            "wasted_rate": 0.6666666666666667
+          }
+        }
+      }
+    ]
+  },
+  {
+    "method": "LLM-Predict + Fallback",
+    "budget": 3,
+    "precision": 1.0,
+    "recall": 1.0,
+    "hit_rate": 1.0,
+    "wasted_rate": 0.0,
+    "fallback_rate": 0.0,
+    "f1": 0.0,
+    "rouge_l": 0.0,
+    "llm_judge": 0.0,
+    "faithfulness": 0.9032258064516129,
+    "query_time_latency_ms": 8.0,
+    "idle_time_cost": 30.0,
+    "total_tokens": 113.0,
+    "samples": [
+      {
+        "sample_id": "locomo_c01_tsqa_001",
+        "precision": 1.0,
+        "recall": 1.0,
+        "hit_rate": 1.0,
+        "wasted_rate": 0.0,
+        "fallback_rate": 0.0,
+        "f1": 0.0,
+        "rouge_l": 0.0,
+        "llm_judge": 0.0,
+        "faithfulness": 0.9032258064516129,
+        "query_time_latency_ms": 8.0,
+        "idle_time_cost": 30.0,
+        "total_tokens": 113.0,
+        "selected_memory_ids": [
+          "m_003"
+        ],
+        "prepared_context_id": "ctx_locomo_c01_tsqa_001_through_d1_3",
+        "verifier": {
+          "decision": "use",
+          "confidence": 0.9,
+          "reason": "Memory m_003 directly answers the query by providing information about Caroline going to an LGBTQ support group.",
+          "selected_memory_ids": [
+            "m_003"
+          ],
+          "provider": "vllm",
+          "memory_candidates": [
+            {
+              "id": "m_002",
+              "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+              "source_turn_id": "D1:2",
+              "segment_id": "seg_locomo_c01_1",
+              "path_id": "P1",
+              "source": "activated_node",
+              "evidence_ids": [
+                "ev_001",
+                "ev_003",
+                "ev_005",
+                "ev_007"
+              ],
+              "repair_score": 0.065
+            },
+            {
+              "id": "m_003",
+              "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+              "source_turn_id": "D1:3",
+              "segment_id": "seg_locomo_c01_1",
+              "path_id": "P1",
+              "source": "activated_node",
+              "evidence_ids": [
+                "ev_002",
+                "ev_004",
+                "ev_006",
+                "ev_008"
+              ],
+              "repair_score": 0.0106
+            },
+            {
+              "id": "m_001",
+              "summary": "Caroline: Hey Mel! Good to see you! How have you been?",
+              "source_turn_id": "D1:1",
+              "segment_id": "seg_locomo_c01_1",
+              "path_id": "P1",
+              "source": "activated_node"
+            }
+          ],
+          "scores": [
+            {
+              "id": "m_003",
+              "score": 0.9229,
+              "llm_selected": true,
+              "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful."
+            },
+            {
+              "id": "m_001",
+              "score": 0.2188,
+              "llm_selected": false,
+              "summary": "Caroline: Hey Mel! Good to see you! How have you been?"
+            },
+            {
+              "id": "m_002",
+              "score": 0.2067,
+              "llm_selected": false,
+              "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?"
+            }
+          ]
+        },
+        "prepared_context": {
+          "context_package_id": "ctx_locomo_c01_tsqa_001_through_d1_3",
+          "intent_node": {
+            "node_id": "intent_locomo_c01_tsqa_001_through_d1_3",
+            "node_type": "IntentNode",
+            "content": "The user may continue the active segment.",
+            "possible_user_query": "The user may ask about recently mentioned decisions, entities, or metrics.",
+            "confidence": 0.99,
+            "required_support": [
+              "user goal",
+              "method definition",
+              "related work distinction",
+              "evidence"
+            ]
+          },
+          "target_intent": "The user may continue the active segment.",
+          "possible_user_query": "The user may ask about recently mentioned decisions, entities, or metrics.",
+          "confidence": 0.99,
+          "meta_path_library": [
+            {
+              "path_id": "P1",
+              "path": "Intent -> UserGoal -> Idea",
+              "purpose": "Recover the user's goal, method definition, and active idea."
+            },
+            {
+              "path_id": "P2",
+              "path": "Intent -> Paper -> Claim -> Evidence",
+              "purpose": "Check whether related-work or paper claims have evidence."
+            },
+            {
+              "path_id": "P3",
+              "path": "Intent -> Topic -> Paper -> Claim",
+              "purpose": "Locate representative methods or claims for the topic."
+            },
+            {
+              "path_id": "P4",
+              "path": "Claim -> Evidence",
+              "purpose": "Find direct evidence for claims needed by the future answer."
+            },
+            {
+              "path_id": "P5",
+              "path": "Claim -> contradicts -> Claim",
+              "purpose": "Look for conflicts, boundary claims, and distinctions."
+            },
+            {
+              "path_id": "P6",
+              "path": "Claim -> Gap",
+              "purpose": "Locate missing support, outdated facts, or coverage gaps."
+            }
+          ],
+          "selected_paths": [
+            {
+              "path_id": "P1",
+              "reason": "This path helps in recovering the user's goal, method definition, and active idea which aligns with the intent of the user as described in the dialogue."
+            }
+          ],
+          "executed_paths": [
+            {
+              "path_id": "P1",
+              "path": "Intent -> UserGoal -> Idea",
+              "selected_memory_ids": [
+                "m_002",
+                "m_003",
+                "m_001"
+              ],
+              "node_count": 15,
+              "edge_count": 18
+            }
+          ],
+          "activated_nodes": [
+            {
+              "id": "m_001",
+              "node_type": "MemoryNode",
+              "path_id": "P1",
+              "summary": "Caroline: Hey Mel! Good to see you! How have you been?",
+              "source_turn_id": "D1:1",
+              "segment_id": "seg_locomo_c01_1"
+            },
+            {
+              "id": "e_hey",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "Hey",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "e_mel",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "Mel",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "e_how",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "How",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "e_anything",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "Anything",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "m_003",
+              "node_type": "MemoryNode",
+              "path_id": "P1",
+              "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+              "source_turn_id": "D1:3",
+              "segment_id": "seg_locomo_c01_1"
+            },
+            {
+              "id": "D1:2",
+              "node_type": "TurnNode",
+              "path_id": "P1",
+              "summary": "Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+              "source_turn_id": null,
+              "segment_id": "seg_locomo_c01_1"
+            },
+            {
+              "id": "seg_locomo_c01_1",
+              "node_type": "SegmentNode",
+              "path_id": "P1",
+              "summary": "1:56 pm on 8 May, 2023",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "e_what",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "What",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "e_good",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "Good",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "D1:1",
+              "node_type": "TurnNode",
+              "path_id": "P1",
+              "summary": "Hey Mel! Good to see you! How have you been?",
+              "source_turn_id": null,
+              "segment_id": "seg_locomo_c01_1"
+            },
+            {
+              "id": "D1:3",
+              "node_type": "TurnNode",
+              "path_id": "P1",
+              "summary": "I went to a LGBTQ support group yesterday and it was so powerful.",
+              "source_turn_id": null,
+              "segment_id": "seg_locomo_c01_1"
+            },
+            {
+              "id": "e_caroline",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "Caroline",
+              "source_turn_id": null,
+              "segment_id": null
+            },
+            {
+              "id": "m_002",
+              "node_type": "MemoryNode",
+              "path_id": "P1",
+              "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+              "source_turn_id": "D1:2",
+              "segment_id": "seg_locomo_c01_1"
+            },
+            {
+              "id": "e_lgbtq",
+              "node_type": "EntityNode",
+              "path_id": "P1",
+              "summary": "LGBTQ",
+              "source_turn_id": null,
+              "segment_id": null
+            }
+          ],
+          "support_check": {
+            "support_status": "partial",
+            "supported_claims": [
+              "The user may ask about recently mentioned decisions, entities, or metrics."
+            ],
+            "missing_support": [
+              "user goal",
+              "method definition",
+              "related work distinction",
+              "evidence"
+            ],
+            "confidence": 0.488,
+            "provider": "vllm"
+          },
+          "gaps": [
+            {
+              "gap_id": "gap_001",
+              "gap_type": "evidence_gap",
+              "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+              "missing_support": "user goal",
+              "priority": 0.8,
+              "repair_query": "user goal may active ask continue decisions definition distinction entities evidence mentioned"
+            },
+            {
+              "gap_id": "gap_002",
+              "gap_type": "definition_gap",
+              "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+              "missing_support": "method definition",
+              "priority": 0.8,
+              "repair_query": "user definition may method active ask continue decisions distinction entities evidence goal"
+            },
+            {
+              "gap_id": "gap_003",
+              "gap_type": "evidence_gap",
+              "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+              "missing_support": "related work distinction",
+              "priority": 0.8,
+              "repair_query": "user distinction may related work active ask continue decisions definition entities evidence"
+            },
+            {
+              "gap_id": "gap_004",
+              "gap_type": "evidence_gap",
+              "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+              "missing_support": "evidence",
+              "priority": 0.8,
+              "repair_query": "user evidence may active ask continue decisions definition distinction entities goal mentioned"
+            }
+          ],
+          "evidence": [
+            {
+              "evidence_id": "ev_001",
+              "candidate_gap_id": "gap_001",
+              "source_type": "memory",
+              "source_id": "m_002",
+              "chunk_id": "D1:2",
+              "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+              "score": 0.065,
+              "provenance": {
+                "memory_id": "m_002",
+                "turn_id": "D1:2",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            },
+            {
+              "evidence_id": "ev_002",
+              "candidate_gap_id": "gap_001",
+              "source_type": "memory",
+              "source_id": "m_003",
+              "chunk_id": "D1:3",
+              "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+              "score": 0.0106,
+              "provenance": {
+                "memory_id": "m_003",
+                "turn_id": "D1:3",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            },
+            {
+              "evidence_id": "ev_003",
+              "candidate_gap_id": "gap_002",
+              "source_type": "memory",
+              "source_id": "m_002",
+              "chunk_id": "D1:2",
+              "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+              "score": 0.065,
+              "provenance": {
+                "memory_id": "m_002",
+                "turn_id": "D1:2",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            },
+            {
+              "evidence_id": "ev_004",
+              "candidate_gap_id": "gap_002",
+              "source_type": "memory",
+              "source_id": "m_003",
+              "chunk_id": "D1:3",
+              "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+              "score": 0.0106,
+              "provenance": {
+                "memory_id": "m_003",
+                "turn_id": "D1:3",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            },
+            {
+              "evidence_id": "ev_005",
+              "candidate_gap_id": "gap_003",
+              "source_type": "memory",
+              "source_id": "m_002",
+              "chunk_id": "D1:2",
+              "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+              "score": 0.065,
+              "provenance": {
+                "memory_id": "m_002",
+                "turn_id": "D1:2",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            },
+            {
+              "evidence_id": "ev_006",
+              "candidate_gap_id": "gap_003",
+              "source_type": "memory",
+              "source_id": "m_003",
+              "chunk_id": "D1:3",
+              "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+              "score": 0.0106,
+              "provenance": {
+                "memory_id": "m_003",
+                "turn_id": "D1:3",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            },
+            {
+              "evidence_id": "ev_007",
+              "candidate_gap_id": "gap_004",
+              "source_type": "memory",
+              "source_id": "m_002",
+              "chunk_id": "D1:2",
+              "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+              "score": 0.065,
+              "provenance": {
+                "memory_id": "m_002",
+                "turn_id": "D1:2",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            },
+            {
+              "evidence_id": "ev_008",
+              "candidate_gap_id": "gap_004",
+              "source_type": "memory",
+              "source_id": "m_003",
+              "chunk_id": "D1:3",
+              "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+              "score": 0.0106,
+              "provenance": {
+                "memory_id": "m_003",
+                "turn_id": "D1:3",
+                "segment_id": "seg_locomo_c01_1"
+              }
+            }
+          ],
+          "bindings": [
+            {
+              "evidence_id": "ev_001",
+              "bind_to": "gap_001",
+              "binding_type": "supports",
+              "reason": "The conversation snippet mentions recent activities which can be used to clarify the user's recent decisions or entities."
+            }
+          ],
+          "usable_claims": [
+            {
+              "claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+              "gap_id": "gap_001",
+              "evidence": [
+                "ev_001"
+              ],
+              "status": "repaired"
+            }
+          ],
+          "summary": "Prepared context for predicted intent: The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']. Gaps: gap_001:evidence_gap:repaired; gap_002:definition_gap:open; gap_003:evidence_gap:open; gap_004:evidence_gap:open",
+          "risk": "Use only when the next query matches the predicted intent or asks about the claims, gaps, evidence, or distinctions prepared in this package.",
+          "memory_ids": [
+            "m_002",
+            "m_003",
+            "m_001"
+          ],
+          "metadata": {
+            "module": "future_intent_conditioned_gap_reasoning",
+            "path_count": 1,
+            "gap_count": 4,
+            "evidence_count": 8,
+            "binding_count": 1,
+            "llm_enabled": true
+          }
+        },
+        "proactive_precision": 0.3333333333333333,
+        "proactive_recall": 1.0,
+        "proactive_hit_rate": 1.0,
+        "proactive_wasted_rate": 0.6666666666666667,
+        "trace": {
+          "sample": {
+            "sample_id": "locomo_c01_tsqa_001",
+            "history_cache_key": "locomo_c01_tsqa_001_through_D1:3",
+            "question": "When did Caroline go to the LGBTQ support group?",
+            "metadata": {
+              "dataset": "locomo",
+              "eval_mode": "time-sliced",
+              "conversation_id": "locomo_c01",
+              "category": 2,
+              "history_turn_count": 3,
+              "full_history_turn_count": 419,
+              "slice_end_index": 3,
+              "slice_end_turn_id": "D1:3",
+              "slice_reason": "through_latest_gold_evidence"
+            },
+            "history_turn_count": 3,
+            "history_tail": [
+              {
+                "turn_id": "D1:1",
+                "speaker": "Caroline",
+                "text": "Hey Mel! Good to see you! How have you been?",
+                "segment_id": "seg_locomo_c01_1",
+                "timestamp": 1
+              },
+              {
+                "turn_id": "D1:2",
+                "speaker": "Melanie",
+                "text": "Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "segment_id": "seg_locomo_c01_1",
+                "timestamp": 2
+              },
+              {
+                "turn_id": "D1:3",
+                "speaker": "Caroline",
+                "text": "I went to a LGBTQ support group yesterday and it was so powerful.",
+                "segment_id": "seg_locomo_c01_1",
+                "timestamp": 3
+              }
+            ]
+          },
+          "ground_truth": {
+            "gold_answer": "7 May 2023",
+            "gold_evidence_turn_ids": [
+              "D1:3"
+            ],
+            "gold_evidence_memory_ids": [
+              "m_003"
+            ],
+            "gold_evidence_memories": [
+              {
+                "id": "m_003",
+                "source_turn_id": "D1:3",
+                "timestamp": 3,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "event",
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "keywords": [
+                  "group",
+                  "lgbtq",
+                  "powerful",
+                  "support",
+                  "went",
+                  "yesterday"
+                ],
+                "entities": [
+                  "LGBTQ"
+                ],
+                "importance": 0.53
+              }
+            ],
+            "evidence_terms": [
+              "2023",
+              "caroline",
+              "group",
+              "lgbtq",
+              "may",
+              "support"
+            ]
+          },
+          "prediction": {
+            "predicted_future_intents": [
+              "The user may continue the active segment.",
+              "The user may ask about recently mentioned decisions, entities, or metrics."
+            ],
+            "activated_memory_ids": [
+              {
+                "id": "m_002",
+                "reason": "Heuristic prediction from recent keyword/entity overlap, segment, importance, and recency.",
+                "confidence": 0.99
+              },
+              {
+                "id": "m_003",
+                "reason": "Heuristic prediction from recent keyword/entity overlap, segment, importance, and recency.",
+                "confidence": 0.99
+              },
+              {
+                "id": "m_001",
+                "reason": "Heuristic prediction from recent keyword/entity overlap, segment, importance, and recency.",
+                "confidence": 0.99
+              }
+            ],
+            "metadata": {
+              "provider": "heuristic"
+            },
+            "activated_memories": [
+              {
+                "id": "m_002",
+                "source_turn_id": "D1:2",
+                "timestamp": 2,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "fact",
+                "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "keywords": [
+                  "anything",
+                  "caroline",
+                  "good",
+                  "hey",
+                  "kids",
+                  "new",
+                  "see",
+                  "swamped",
+                  "work"
+                ],
+                "entities": [
+                  "Hey",
+                  "Caroline",
+                  "Good",
+                  "What",
+                  "Anything"
+                ],
+                "importance": 0.62
+              },
+              {
+                "id": "m_003",
+                "source_turn_id": "D1:3",
+                "timestamp": 3,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "event",
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "keywords": [
+                  "group",
+                  "lgbtq",
+                  "powerful",
+                  "support",
+                  "went",
+                  "yesterday"
+                ],
+                "entities": [
+                  "LGBTQ"
+                ],
+                "importance": 0.53
+              },
+              {
+                "id": "m_001",
+                "source_turn_id": "D1:1",
+                "timestamp": 1,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "fact",
+                "summary": "Caroline: Hey Mel! Good to see you! How have you been?",
+                "content": "Caroline: Hey Mel! Good to see you! How have you been?",
+                "keywords": [
+                  "good",
+                  "hey",
+                  "mel",
+                  "see"
+                ],
+                "entities": [
+                  "Hey",
+                  "Mel",
+                  "Good",
+                  "How"
+                ],
+                "importance": 0.47
+              }
+            ]
+          },
+          "cache": {
+            "cache_id": "cache_locomo_c01_tsqa_001_through_D1:3",
+            "budget": 3,
+            "cache_memory_ids": [
+              "m_002",
+              "m_003",
+              "m_001"
+            ],
+            "cache_memories": [
+              {
+                "id": "m_002",
+                "source_turn_id": "D1:2",
+                "timestamp": 2,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "fact",
+                "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "keywords": [
+                  "anything",
+                  "caroline",
+                  "good",
+                  "hey",
+                  "kids",
+                  "new",
+                  "see",
+                  "swamped",
+                  "work"
+                ],
+                "entities": [
+                  "Hey",
+                  "Caroline",
+                  "Good",
+                  "What",
+                  "Anything"
+                ],
+                "importance": 0.62
+              },
+              {
+                "id": "m_003",
+                "source_turn_id": "D1:3",
+                "timestamp": 3,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "event",
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "keywords": [
+                  "group",
+                  "lgbtq",
+                  "powerful",
+                  "support",
+                  "went",
+                  "yesterday"
+                ],
+                "entities": [
+                  "LGBTQ"
+                ],
+                "importance": 0.53
+              },
+              {
+                "id": "m_001",
+                "source_turn_id": "D1:1",
+                "timestamp": 1,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "fact",
+                "summary": "Caroline: Hey Mel! Good to see you! How have you been?",
+                "content": "Caroline: Hey Mel! Good to see you! How have you been?",
+                "keywords": [
+                  "good",
+                  "hey",
+                  "mel",
+                  "see"
+                ],
+                "entities": [
+                  "Hey",
+                  "Mel",
+                  "Good",
+                  "How"
+                ],
+                "importance": 0.47
+              }
+            ]
+          },
+          "gap_reasoning": {
+            "context_package_id": "ctx_locomo_c01_tsqa_001_through_d1_3",
+            "target_intent": "The user may continue the active segment.",
+            "possible_user_query": "The user may ask about recently mentioned decisions, entities, or metrics.",
+            "selected_paths": [
+              {
+                "path_id": "P1",
+                "reason": "This path helps in recovering the user's goal, method definition, and active idea which aligns with the intent of the user as described in the dialogue."
+              }
+            ],
+            "executed_paths": [
+              {
+                "path_id": "P1",
+                "path": "Intent -> UserGoal -> Idea",
+                "selected_memory_ids": [
+                  "m_002",
+                  "m_003",
+                  "m_001"
+                ],
+                "node_count": 15,
+                "edge_count": 18
+              }
+            ],
+            "support_check": {
+              "support_status": "partial",
+              "supported_claims": [
+                "The user may ask about recently mentioned decisions, entities, or metrics."
+              ],
+              "missing_support": [
+                "user goal",
+                "method definition",
+                "related work distinction",
+                "evidence"
+              ],
+              "confidence": 0.488,
+              "provider": "vllm"
+            },
+            "gaps": [
+              {
+                "gap_id": "gap_001",
+                "gap_type": "evidence_gap",
+                "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+                "missing_support": "user goal",
+                "priority": 0.8,
+                "repair_query": "user goal may active ask continue decisions definition distinction entities evidence mentioned"
+              },
+              {
+                "gap_id": "gap_002",
+                "gap_type": "definition_gap",
+                "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+                "missing_support": "method definition",
+                "priority": 0.8,
+                "repair_query": "user definition may method active ask continue decisions distinction entities evidence goal"
+              },
+              {
+                "gap_id": "gap_003",
+                "gap_type": "evidence_gap",
+                "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+                "missing_support": "related work distinction",
+                "priority": 0.8,
+                "repair_query": "user distinction may related work active ask continue decisions definition entities evidence"
+              },
+              {
+                "gap_id": "gap_004",
+                "gap_type": "evidence_gap",
+                "related_claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+                "missing_support": "evidence",
+                "priority": 0.8,
+                "repair_query": "user evidence may active ask continue decisions definition distinction entities goal mentioned"
+              }
+            ],
+            "repair_evidence": [
+              {
+                "evidence_id": "ev_001",
+                "candidate_gap_id": "gap_001",
+                "source_type": "memory",
+                "source_id": "m_002",
+                "chunk_id": "D1:2",
+                "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "score": 0.065,
+                "provenance": {
+                  "memory_id": "m_002",
+                  "turn_id": "D1:2",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              },
+              {
+                "evidence_id": "ev_002",
+                "candidate_gap_id": "gap_001",
+                "source_type": "memory",
+                "source_id": "m_003",
+                "chunk_id": "D1:3",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "score": 0.0106,
+                "provenance": {
+                  "memory_id": "m_003",
+                  "turn_id": "D1:3",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              },
+              {
+                "evidence_id": "ev_003",
+                "candidate_gap_id": "gap_002",
+                "source_type": "memory",
+                "source_id": "m_002",
+                "chunk_id": "D1:2",
+                "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "score": 0.065,
+                "provenance": {
+                  "memory_id": "m_002",
+                  "turn_id": "D1:2",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              },
+              {
+                "evidence_id": "ev_004",
+                "candidate_gap_id": "gap_002",
+                "source_type": "memory",
+                "source_id": "m_003",
+                "chunk_id": "D1:3",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "score": 0.0106,
+                "provenance": {
+                  "memory_id": "m_003",
+                  "turn_id": "D1:3",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              },
+              {
+                "evidence_id": "ev_005",
+                "candidate_gap_id": "gap_003",
+                "source_type": "memory",
+                "source_id": "m_002",
+                "chunk_id": "D1:2",
+                "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "score": 0.065,
+                "provenance": {
+                  "memory_id": "m_002",
+                  "turn_id": "D1:2",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              },
+              {
+                "evidence_id": "ev_006",
+                "candidate_gap_id": "gap_003",
+                "source_type": "memory",
+                "source_id": "m_003",
+                "chunk_id": "D1:3",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "score": 0.0106,
+                "provenance": {
+                  "memory_id": "m_003",
+                  "turn_id": "D1:3",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              },
+              {
+                "evidence_id": "ev_007",
+                "candidate_gap_id": "gap_004",
+                "source_type": "memory",
+                "source_id": "m_002",
+                "chunk_id": "D1:2",
+                "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "score": 0.065,
+                "provenance": {
+                  "memory_id": "m_002",
+                  "turn_id": "D1:2",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              },
+              {
+                "evidence_id": "ev_008",
+                "candidate_gap_id": "gap_004",
+                "source_type": "memory",
+                "source_id": "m_003",
+                "chunk_id": "D1:3",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "score": 0.0106,
+                "provenance": {
+                  "memory_id": "m_003",
+                  "turn_id": "D1:3",
+                  "segment_id": "seg_locomo_c01_1"
+                }
+              }
+            ],
+            "bindings": [
+              {
+                "evidence_id": "ev_001",
+                "bind_to": "gap_001",
+                "binding_type": "supports",
+                "reason": "The conversation snippet mentions recent activities which can be used to clarify the user's recent decisions or entities."
+              }
+            ],
+            "usable_claims": [
+              {
+                "claim": "The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']",
+                "gap_id": "gap_001",
+                "evidence": [
+                  "ev_001"
+                ],
+                "status": "repaired"
+              }
+            ],
+            "prepared_memory_ids": [
+              "m_002",
+              "m_003",
+              "m_001"
+            ],
+            "prepared_memories": [
+              {
+                "id": "m_002",
+                "source_turn_id": "D1:2",
+                "timestamp": 2,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "fact",
+                "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "content": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "keywords": [
+                  "anything",
+                  "caroline",
+                  "good",
+                  "hey",
+                  "kids",
+                  "new",
+                  "see",
+                  "swamped",
+                  "work"
+                ],
+                "entities": [
+                  "Hey",
+                  "Caroline",
+                  "Good",
+                  "What",
+                  "Anything"
+                ],
+                "importance": 0.62
+              },
+              {
+                "id": "m_003",
+                "source_turn_id": "D1:3",
+                "timestamp": 3,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "event",
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "keywords": [
+                  "group",
+                  "lgbtq",
+                  "powerful",
+                  "support",
+                  "went",
+                  "yesterday"
+                ],
+                "entities": [
+                  "LGBTQ"
+                ],
+                "importance": 0.53
+              },
+              {
+                "id": "m_001",
+                "source_turn_id": "D1:1",
+                "timestamp": 1,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "fact",
+                "summary": "Caroline: Hey Mel! Good to see you! How have you been?",
+                "content": "Caroline: Hey Mel! Good to see you! How have you been?",
+                "keywords": [
+                  "good",
+                  "hey",
+                  "mel",
+                  "see"
+                ],
+                "entities": [
+                  "Hey",
+                  "Mel",
+                  "Good",
+                  "How"
+                ],
+                "importance": 0.47
+              }
+            ],
+            "summary": "Prepared context for predicted intent: The user may continue the active segment. The user may ask about recently mentioned decisions, entities, or metrics. ['user goal', 'method definition', 'related work distinction', 'evidence']. Gaps: gap_001:evidence_gap:repaired; gap_002:definition_gap:open; gap_003:evidence_gap:open; gap_004:evidence_gap:open",
+            "risk": "Use only when the next query matches the predicted intent or asks about the claims, gaps, evidence, or distinctions prepared in this package."
+          },
+          "verifier": {
+            "decision": "use",
+            "confidence": 0.9,
+            "reason": "Memory m_003 directly answers the query by providing information about Caroline going to an LGBTQ support group.",
+            "selected_memory_ids": [
+              "m_003"
+            ],
+            "provider": "vllm",
+            "memory_candidates": [
+              {
+                "id": "m_002",
+                "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?",
+                "source_turn_id": "D1:2",
+                "segment_id": "seg_locomo_c01_1",
+                "path_id": "P1",
+                "source": "activated_node",
+                "evidence_ids": [
+                  "ev_001",
+                  "ev_003",
+                  "ev_005",
+                  "ev_007"
+                ],
+                "repair_score": 0.065
+              },
+              {
+                "id": "m_003",
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "source_turn_id": "D1:3",
+                "segment_id": "seg_locomo_c01_1",
+                "path_id": "P1",
+                "source": "activated_node",
+                "evidence_ids": [
+                  "ev_002",
+                  "ev_004",
+                  "ev_006",
+                  "ev_008"
+                ],
+                "repair_score": 0.0106
+              },
+              {
+                "id": "m_001",
+                "summary": "Caroline: Hey Mel! Good to see you! How have you been?",
+                "source_turn_id": "D1:1",
+                "segment_id": "seg_locomo_c01_1",
+                "path_id": "P1",
+                "source": "activated_node"
+              }
+            ],
+            "scores": [
+              {
+                "id": "m_003",
+                "score": 0.9229,
+                "llm_selected": true,
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful."
+              },
+              {
+                "id": "m_001",
+                "score": 0.2188,
+                "llm_selected": false,
+                "summary": "Caroline: Hey Mel! Good to see you! How have you been?"
+              },
+              {
+                "id": "m_002",
+                "score": 0.2067,
+                "llm_selected": false,
+                "summary": "Melanie: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?"
+              }
+            ],
+            "selected_memories": [
+              {
+                "id": "m_003",
+                "source_turn_id": "D1:3",
+                "timestamp": 3,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "event",
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "keywords": [
+                  "group",
+                  "lgbtq",
+                  "powerful",
+                  "support",
+                  "went",
+                  "yesterday"
+                ],
+                "entities": [
+                  "LGBTQ"
+                ],
+                "importance": 0.53
+              }
+            ]
+          },
+          "final_selection": {
+            "method": "cache_plus_fallback",
+            "fallback_used": false,
+            "selected_memory_ids": [
+              "m_003"
+            ],
+            "selected_memories": [
+              {
+                "id": "m_003",
+                "source_turn_id": "D1:3",
+                "timestamp": 3,
+                "segment_id": "seg_locomo_c01_1",
+                "type": "event",
+                "summary": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "content": "Caroline: I went to a LGBTQ support group yesterday and it was so powerful.",
+                "keywords": [
+                  "group",
+                  "lgbtq",
+                  "powerful",
+                  "support",
+                  "went",
+                  "yesterday"
+                ],
+                "entities": [
+                  "LGBTQ"
+                ],
+                "importance": 0.53
+              }
+            ],
+            "metrics": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "hit_rate": 1.0,
+              "wasted_rate": 0.0
+            }
+          },
+          "proactive_metrics": {
+            "precision": 0.3333333333333333,
+            "recall": 1.0,
+            "hit_rate": 1.0,
+            "wasted_rate": 0.6666666666666667
+          }
+        }
+      }
+    ]
+  },
+  {
+    "method": "Oracle Cache",
+    "budget": 3,
+    "precision": 1.0,
+    "recall": 1.0,
+    "hit_rate": 1.0,
+    "wasted_rate": 0.0,
+    "fallback_rate": 0.0,
+    "f1": 0.0,
+    "rouge_l": 0.0,
+    "llm_judge": 0.0,
+    "faithfulness": 0.9032258064516129,
+    "query_time_latency_ms": 8.0,
+    "idle_time_cost": 0.0,
+    "total_tokens": 83.0,
+    "samples": [
+      {
+        "sample_id": "locomo_c01_tsqa_001",
+        "precision": 1.0,
+        "recall": 1.0,
+        "hit_rate": 1.0,
+        "wasted_rate": 0.0,
+        "fallback_rate": 0.0,
+        "f1": 0.0,
+        "rouge_l": 0.0,
+        "llm_judge": 0.0,
+        "faithfulness": 0.9032258064516129,
+        "query_time_latency_ms": 8.0,
+        "idle_time_cost": 0.0,
+        "total_tokens": 83.0,
+        "selected_memory_ids": [
+          "m_003"
+        ]
+      }
+    ]
+  }
+]

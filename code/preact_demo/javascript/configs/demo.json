@@ -1,0 +1,8 @@
+{
+  "cacheBudget": 3,
+  "retrievalTopK": 3,
+  "fallbackRetriever": "vector",
+  "verifierThreshold": 0.12,
+  "similarityThreshold": 0.28,
+  "randomSeed": 7
+}

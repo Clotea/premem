@@ -1,0 +1,10 @@
+{
+  "name": "preact-memory-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lightweight proactive memory activation demo.",
+  "scripts": {
+    "demo": "node preact_demo/javascript/run_demo.js",
+    "demo:locomo": "node preact_demo/javascript/run_demo.js --dataset locomo --limit 10 --download-locomo"
+  }
+}
