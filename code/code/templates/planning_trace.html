@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PreMem 规划语义追踪</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --background: Canvas;
+      --foreground: CanvasText;
+      --card: color-mix(in srgb, CanvasText 4%, Canvas);
+      --card-foreground: CanvasText;
+      --muted: color-mix(in srgb, CanvasText 8%, Canvas);
+      --muted-foreground: color-mix(in srgb, CanvasText 66%, Canvas);
+      --border: color-mix(in srgb, CanvasText 18%, Canvas);
+      --primary: Highlight;
+      --primary-foreground: HighlightText;
+      --series-1: var(--viz-series-1, Highlight);
+      --series-2: var(--viz-series-2, color-mix(in srgb, Highlight 68%, CanvasText));
+      --series-3: var(--viz-series-3, color-mix(in srgb, Highlight 55%, Canvas));
+      --series-4: var(--viz-series-4, color-mix(in srgb, CanvasText 76%, Highlight));
+      --series-5: var(--viz-series-5, color-mix(in srgb, CanvasText 54%, Canvas));
+      --series-6: var(--viz-series-6, color-mix(in srgb, Highlight 42%, CanvasText));
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--background);
+      color: var(--foreground);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--background); color: var(--foreground); }
+    main { max-width: 1180px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 6px; font-size: clamp(22px, 4vw, 34px); font-weight: 500; }
+    p { margin: 0; }
+    .subhead { color: var(--muted-foreground); margin-bottom: 18px; }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+    .card { background: var(--card); color: var(--card-foreground); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+    .stat-label { color: var(--muted-foreground); font-size: 13px; }
+    .stat-value { margin-top: 4px; font-size: 22px; font-variant-numeric: tabular-nums; }
+    .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0 10px; }
+    button, select {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--foreground);
+      padding: 8px 11px;
+      font: inherit;
+      cursor: pointer;
+    }
+    button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+    button:focus-visible, select:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    label { color: var(--muted-foreground); font-size: 13px; }
+    .secondary-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 40px; margin-bottom: 6px; }
+    .plot { position: relative; width: 100%; min-height: 470px; }
+    svg { display: block; width: 100%; height: auto; min-height: 430px; overflow: visible; }
+    .detail { min-height: 54px; margin-top: 8px; padding: 10px 0; border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: 13px; }
+    .detail strong { color: var(--foreground); font-weight: 500; }
+    .finding { margin-top: 14px; padding: 12px 14px; border-left: 4px solid var(--series-4); background: color-mix(in srgb, var(--series-4) 10%, Canvas); }
+    .finding strong { font-weight: 500; }
+    .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; color: var(--muted-foreground); font-size: 12px; }
+    .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; background: var(--legend-color); }
+    .node-label { fill: var(--foreground); font-size: 11px; }
+    .axis-label, .annotation { fill: var(--muted-foreground); font-size: 11px; }
+    .grid-line { stroke: var(--border); stroke-width: 1; }
+    .edge { stroke: var(--border); stroke-width: 1; opacity: .65; }
+    .edge-new { stroke: var(--series-3); opacity: .95; }
+    .node { stroke: var(--background); stroke-width: 1.5; }
+    .node-new { stroke: var(--series-3); stroke-width: 3; }
+    .node-gold { stroke: var(--series-4); stroke-width: 3; }
+    .bar-bg { fill: var(--muted); }
+    .timeline-bar { fill: var(--series-1); }
+    .selected-bar { fill: var(--series-2); }
+    .rejected-bar { fill: var(--series-5); opacity: .7; }
+    .lane-box { fill: var(--card); stroke: var(--border); }
+    .lane-box-graph { fill: color-mix(in srgb, var(--series-2) 18%, Canvas); stroke: var(--series-2); }
+    .lane-box-rank { fill: color-mix(in srgb, var(--series-3) 16%, Canvas); stroke: var(--series-3); }
+    .lane-text { fill: var(--foreground); font-size: 12px; text-anchor: middle; }
+    .route-line { stroke: var(--muted-foreground); stroke-width: 1.5; marker-end: url(#arrow); }
+    .route-line-graph { stroke: var(--series-2); stroke-width: 2.5; marker-end: url(#arrow-graph); }
+    .empty { color: var(--muted-foreground); padding: 80px 20px; text-align: center; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px; }
+    th, td { padding: 8px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { color: var(--muted-foreground); font-weight: 500; }
+    .semantic-header { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 8px 0 12px; }
+    .semantic-block { padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .semantic-block strong { display: block; margin-bottom: 5px; font-weight: 500; }
+    .semantic-text { line-height: 1.5; }
+    .status {
+      display: inline-block;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px 7px;
+      white-space: nowrap;
+      font-size: 12px;
+    }
+    .status-hit { background: color-mix(in srgb, var(--series-2) 16%, Canvas); }
+    .status-miss { background: color-mix(in srgb, var(--series-4) 14%, Canvas); }
+    .status-prepared { background: color-mix(in srgb, var(--series-3) 16%, Canvas); }
+    .semantic-node-label { fill: var(--foreground); font-size: 10px; }
+    .diagnosis-summary {
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--series-4);
+      background: color-mix(in srgb, var(--series-4) 10%, Canvas);
+      line-height: 1.55;
+    }
+    .diagnosis-section { margin: 18px 0; }
+    .diagnosis-section h2 { margin: 0 0 8px; font-size: 16px; font-weight: 500; }
+    .stage-mark { display: inline-block; min-width: 34px; text-align: center; font-weight: 500; }
+    .stage-hit { color: var(--series-2); }
+    .stage-miss { color: var(--muted-foreground); }
+    .reasoning-list { margin: 6px 0; padding-left: 20px; }
+    .reasoning-list li { margin: 5px 0; line-height: 1.45; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    @media (max-width: 700px) {
+      main { padding: 16px; }
+      .stats { grid-template-columns: 1fr; }
+      .semantic-header { grid-template-columns: 1fr; }
+      .plot { min-height: 390px; }
+      svg { min-height: 360px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>PreMem 规划语义追踪</h1>
+  <p class="subhead" id="subtitle"></p>
+
+  <section class="stats" aria-label="Trace summary">
+    <div class="card">
+      <div class="stat-label">图规模</div>
+      <div class="stat-value" id="graphStat"></div>
+    </div>
+    <div class="card">
+      <div class="stat-label">预备缓存 / Gold 召回率</div>
+      <div class="stat-value" id="cacheStat"></div>
+    </div>
+    <div class="card">
+      <div class="stat-label">预测 + 规划耗时</div>
+      <div class="stat-value" id="latencyStat"></div>
+    </div>
+  </section>
+
+  <nav class="controls" aria-label="可视化模式">
+    <button type="button" data-mode="diagnosis" aria-pressed="true">归因诊断</button>
+    <button type="button" data-mode="evidence" aria-pressed="false">语义证据</button>
+    <button type="button" data-mode="timeline" aria-pressed="false">规划耗时</button>
+    <button type="button" data-mode="graph" aria-pressed="false">图演化</button>
+    <button type="button" data-mode="route" aria-pressed="false">Meta-path 寻路</button>
+    <button type="button" data-mode="compression" aria-pressed="false">缓存压缩</button>
+  </nav>
+
+  <div class="secondary-controls" id="secondaryControls"></div>
+  <section class="plot" id="plot" aria-live="polite"></section>
+  <div class="detail" id="detail"></div>
+  <div class="legend" id="legend"></div>
+
+  <aside class="finding">
+    <strong>实现结论：</strong>
+    <span id="finding">当前 P1–P6 只影响全库 Memory 排名；选出 top-k 后才沿物理图边展开局部子图，并不是按概念本体逐跳寻路。</span>
+  </aside>
+</main>
+
+<script>
+const trace = __PLANNING_TRACE_DATA__;
+const state = { mode: "diagnosis", graphStage: trace.graph.evolution.length - 1, pathIndex: 0 };
+const memoryById = new Map(trace.graph.nodes.map(node => [node.id, node]));
+const preparedIds = new Set(trace.evaluation_overlay.prepared_memory_ids);
+const goldIds = new Set(trace.evaluation_overlay.gold_memory_ids);
+const localization = trace.localization?.strings || {};
+const stageLabels = {
+  "Write memories from history": "从历史对话写入 Memory",
+  "Build heterogeneous memory graph": "构建异构记忆图",
+  "Predict future memory need": "预测未来记忆需求",
+  "Materialize predicted intent": "生成预测意图节点",
+  "Select conceptual meta-paths": "选择概念 Meta-path",
+  "Execute path-conditioned memory activation": "执行路径条件化记忆激活",
+  "Check whether activated graph supports the intent": "检查激活子图能否支持意图",
+  "Generate missing-support GapNodes": "生成缺失支持的 GapNode",
+  "Retrieve evidence for each gap": "为每个 Gap 检索证据",
+  "Bind evidence to GapNodes": "把证据绑定到 GapNode",
+  "Merge predictor, path, and repair candidates": "合并预测、路径和修复候选",
+  "Compress candidates into the prepared cache": "压缩候选并生成预备缓存"
+};
+const typeColor = {
+  TurnNode: "var(--series-1)",
+  SegmentNode: "var(--series-2)",
+  MemoryNode: "var(--series-3)",
+  EntityNode: "var(--series-5)",
+  IntentNode: "var(--series-6)"
+};
+const edgeColor = {
+  belongs_to: "var(--series-1)",
+  derived_from: "var(--series-2)",
+  mentions: "var(--series-5)",
+  temporal_next: "var(--series-3)",
+  similar_to: "var(--series-4)"
+};
+const svgNS = "http://www.w3.org/2000/svg";
+
+document.getElementById("subtitle").textContent =
+  `${trace.sample.id} · ${trace.sample.history_turn_count} 轮历史对话 · ${trace.runtime.vllm_model}`;
+document.getElementById("graphStat").textContent = `${trace.graph.node_count} 节点 / ${trace.graph.edge_count} 边`;
+const metrics = trace.evaluation_overlay.activation_metrics;
+document.getElementById("cacheStat").textContent =
+  `${trace.evaluation_overlay.prepared_memory_ids.length} / ${(Number(metrics.recall) * 100).toFixed(1)}%`;
+document.getElementById("latencyStat").textContent = `${(trace.runtime.total_planning_ms / 1000).toFixed(2)} s`;
+
+document.querySelectorAll("[data-mode]").forEach(button => {
+  button.addEventListener("click", () => {
+    state.mode = button.dataset.mode;
+    document.querySelectorAll("[data-mode]").forEach(peer => {
+      peer.setAttribute("aria-pressed", String(peer === button));
+    });
+    render();
+  });
+});
+
+function createSvg(label, height = 440) {
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("viewBox", `0 0 1000 ${height}`);
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", label);
+  const defs = document.createElementNS(svgNS, "defs");
+  defs.innerHTML = `
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted-foreground)"></path>
+    </marker>
+    <marker id="arrow-graph" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--series-2)"></path>
+    </marker>`;
+  svg.appendChild(defs);
+  return svg;
+}
+
+function el(name, attrs = {}, text = "") {
+  const node = document.createElementNS(svgNS, name);
+  Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, String(value)));
+  if (text) node.textContent = text;
+  return node;
+}
+
+function setLegend(items) {
+  const legend = document.getElementById("legend");
+  legend.innerHTML = "";
+  items.forEach(item => {
+    const span = document.createElement("span");
+    span.style.setProperty("--legend-color", item.color);
+    span.textContent = item.label;
+    legend.appendChild(span);
+  });
+}
+
+function render() {
+  const controls = document.getElementById("secondaryControls");
+  const plot = document.getElementById("plot");
+  controls.innerHTML = "";
+  plot.innerHTML = "";
+  document.getElementById("detail").innerHTML = "";
+  if (state.mode === "diagnosis") renderDiagnosis(controls, plot);
+  if (state.mode === "evidence") renderEvidence(controls, plot);
+  if (state.mode === "timeline") renderTimeline(controls, plot);
+  if (state.mode === "graph") renderGraph(controls, plot);
+  if (state.mode === "route") renderRoute(controls, plot);
+  if (state.mode === "compression") renderCompression(controls, plot);
+}
+
+function renderDiagnosis(controls, plot) {
+  const predictionIds = new Set(
+    (trace.prediction.activated_memory_ids || []).map(item => item.id)
+  );
+  const pathIds = new Set(
+    (trace.prepared_context.executed_paths || [])
+      .flatMap(path => path.selected_memory_ids || [])
+  );
+  const repairIds = new Set(
+    (trace.prepared_context.evidence || [])
+      .filter(item => item.source_type === "memory")
+      .map(item => item.source_id)
+  );
+  const candidateIds = new Set(trace.prepared_context.candidate_memory_ids || []);
+  const finalIds = new Set(trace.prepared_context.memory_ids || []);
+  const goldMemoryIds = trace.evaluation_overlay.gold_memory_ids || [];
+
+  const countGold = set => goldMemoryIds.filter(id => set.has(id)).length;
+  const predictorGold = countGold(predictionIds);
+  const pathGold = countGold(pathIds);
+  const repairGold = countGold(repairIds);
+  const candidateGold = countGold(candidateIds);
+  const finalGold = countGold(finalIds);
+  const compressionLost = candidateGold - finalGold;
+
+  const summary = document.createElement("div");
+  summary.className = "diagnosis-summary";
+  summary.innerHTML =
+    `<strong>本样本归因：</strong>预测器覆盖 ${predictorGold}/${goldMemoryIds.length} 条 Gold；` +
+    `Meta-path 覆盖 ${pathGold}/${goldMemoryIds.length}，Gap repair 覆盖 ${repairGold}/${goldMemoryIds.length}；` +
+    `候选池最终只有 ${candidateGold}/${goldMemoryIds.length} 条 Gold，压缩阶段又丢失 ${compressionLost} 条。` +
+    `<br><strong>判断：</strong>主要问题发生在 intent working-set 预测和 Meta-path/Gap 召回阶段，` +
+    `不是 verifier 或 compression。`;
+  plot.appendChild(summary);
+
+  const comparison = document.createElement("div");
+  comparison.className = "semantic-header";
+  comparison.innerHTML = `
+    <div class="semantic-block">
+      <strong>真实问题与 Golden 答案</strong>
+      <div class="semantic-text">${escapeHtml(localized(trace.sample.question))}</div>
+      <div class="semantic-text"><strong>${escapeHtml(localized(trace.sample.answer))}</strong></div>
+    </div>
+    <div class="semantic-block">
+      <strong>预测意图</strong>
+      <div class="semantic-text">${trace.prediction.predicted_future_intents
+        .map(item => escapeHtml(localized(item))).join(" · ")}</div>
+    </div>`;
+  plot.appendChild(comparison);
+
+  const coverage = document.createElement("section");
+  coverage.className = "diagnosis-section";
+  coverage.innerHTML = `<h2>Gold evidence 在各阶段的去向</h2>`;
+  const coverageWrap = document.createElement("div");
+  coverageWrap.className = "table-wrap";
+  const coverageTable = document.createElement("table");
+  coverageTable.innerHTML = `
+    <thead>
+      <tr>
+        <th>Gold 语义内容</th>
+        <th>Intent 预测</th>
+        <th>Meta-path</th>
+        <th>Gap repair</th>
+        <th>候选池</th>
+        <th>最终缓存</th>
+      </tr>
+    </thead>
+    <tbody>${goldMemoryIds.map(memoryId => {
+      const node = memoryById.get(memoryId);
+      return `<tr>
+        <td class="semantic-text">${escapeHtml(localized(node?.summary || memoryId))}</td>
+        ${stageMark(predictionIds.has(memoryId))}
+        ${stageMark(pathIds.has(memoryId))}
+        ${stageMark(repairIds.has(memoryId))}
+        ${stageMark(candidateIds.has(memoryId))}
+        ${stageMark(finalIds.has(memoryId))}
+      </tr>`;
+    }).join("")}</tbody>`;
+  coverageWrap.appendChild(coverageTable);
+  coverage.appendChild(coverageWrap);
+  plot.appendChild(coverage);
+
+  const predictorSection = document.createElement("section");
+  predictorSection.className = "diagnosis-section";
+  predictorSection.innerHTML = `<h2>1. Intent predictor 的选择与理由</h2>`;
+  appendSemanticTable(
+    predictorSection,
+    (trace.prediction.activated_memory_ids || []).map(item => ({
+      status: goldIds.has(item.id) ? "GOLD" : "非 Gold",
+      statusClass: goldIds.has(item.id) ? "status-hit" : "status-prepared",
+      role: `置信度 ${Number(item.confidence || 0).toFixed(2)} · ${localized(item.reason || "")}`,
+      summary: localized(memoryById.get(item.id)?.summary || item.id)
+    }))
+  );
+  plot.appendChild(predictorSection);
+
+  const pathSection = document.createElement("section");
+  pathSection.className = "diagnosis-section";
+  pathSection.innerHTML = `<h2>2. Meta-path 的选择与实际召回</h2>`;
+  (trace.prepared_context.executed_paths || []).forEach(path => {
+    const reason = document.createElement("div");
+    reason.className = "semantic-block";
+    reason.innerHTML =
+      `<strong>${escapeHtml(path.path_id)}：${escapeHtml(
+        String(path.path || "").split("->").map(item => ontologyLabel(item.trim())).join(" → ")
+      )}</strong>` +
+      `<div class="semantic-text">选择理由：${escapeHtml(localized(path.reason || ""))}</div>` +
+      `<div class="semantic-text">真实执行：全库文本排名 → Top-k → 邻接边局部展开；` +
+      `本路径命中 ${countGold(new Set(path.selected_memory_ids || []))} 条 Gold。</div>`;
+    pathSection.appendChild(reason);
+    appendSemanticTable(
+      pathSection,
+      (path.ranking || []).filter(item => item.selected).map(item => ({
+        status: goldIds.has(item.memory_id) ? "GOLD" : "非 Gold",
+        statusClass: goldIds.has(item.memory_id) ? "status-hit" : "",
+        role: `排名 ${item.rank} · 分数 ${Number(item.score).toFixed(3)}`,
+        summary: localized(item.summary)
+      }))
+    );
+  });
+  plot.appendChild(pathSection);
+
+  const support = trace.prepared_context.support_check || {};
+  const gapSection = document.createElement("section");
+  gapSection.className = "diagnosis-section";
+  gapSection.innerHTML =
+    `<h2>3. Support check、Gap 生成与修复</h2>` +
+    `<div class="semantic-block"><strong>支持状态：${supportStatusLabel(support.support_status)} ` +
+    `（置信度 ${Number(support.confidence || 0).toFixed(2)}）</strong>` +
+    `<div class="semantic-text">已支持：${(support.supported_claims || [])
+      .map(item => escapeHtml(localized(item))).join("；") || "无"}</div>` +
+    `<div class="semantic-text">缺失支持：${(support.missing_support || [])
+      .map(item => escapeHtml(localized(item))).join("；") || "无"}</div></div>`;
+
+  const gaps = trace.prepared_context.gaps || [];
+  if (gaps.length) {
+    const gapWrap = document.createElement("div");
+    gapWrap.className = "table-wrap";
+    const gapTable = document.createElement("table");
+    gapTable.innerHTML = `
+      <thead><tr><th>Gap 类型</th><th>判定缺失</th><th>修复查询</th></tr></thead>
+      <tbody>${gaps.map(gap => `<tr>
+        <td>${escapeHtml(gapTypeLabel(gap.gap_type))}</td>
+        <td>${escapeHtml(localized(gap.missing_support || ""))}</td>
+        <td class="semantic-text">${escapeHtml(localized(gap.repair_query || ""))}</td>
+      </tr>`).join("")}</tbody>`;
+    gapWrap.appendChild(gapTable);
+    gapSection.appendChild(gapWrap);
+  }
+
+  const uniqueRepair = [];
+  const seenRepair = new Set();
+  (trace.prepared_context.evidence || []).forEach(item => {
+    if (seenRepair.has(item.source_id)) return;
+    seenRepair.add(item.source_id);
+    uniqueRepair.push(item);
+  });
+  appendSemanticTable(
+    gapSection,
+    uniqueRepair.slice(0, 8).map(item => ({
+      status: goldIds.has(item.source_id) ? "GOLD" : "非 Gold",
+      statusClass: goldIds.has(item.source_id) ? "status-hit" : "",
+      role: `Gap 修复证据 · 分数 ${Number(item.score || 0).toFixed(3)}`,
+      summary: localized(item.content || "")
+    }))
+  );
+  plot.appendChild(gapSection);
+
+  const compressionSection = document.createElement("section");
+  compressionSection.className = "diagnosis-section";
+  compressionSection.innerHTML =
+    `<h2>4. Candidate merge 与 compression</h2>` +
+    `<div class="semantic-block">候选池包含 ${candidateGold}/${goldMemoryIds.length} 条 Gold；` +
+    `压缩后保留 ${finalGold}/${goldMemoryIds.length} 条，压缩额外丢失 ${compressionLost} 条 Gold。</div>`;
+  plot.appendChild(compressionSection);
+
+  document.getElementById("detail").innerHTML =
+    `<strong>阅读方法：</strong>先看 Gold 阶段矩阵定位首次丢失位置，再查看对应阶段的推理理由和语义候选。`;
+  setLegend([
+    { label: "✓ 已进入该阶段", color: "var(--series-2)" },
+    { label: "— 未进入该阶段", color: "var(--muted-foreground)" }
+  ]);
+}
+
+function renderEvidence(controls, plot) {
+  const header = document.createElement("div");
+  header.className = "semantic-header";
+  header.innerHTML = `
+    <div class="semantic-block">
+      <strong>Actual query</strong>
+      <div class="semantic-text">${escapeHtml(localized(trace.sample.question))}</div>
+    </div>
+    <div class="semantic-block">
+      <strong>Golden 答案</strong>
+      <div class="semantic-text">${escapeHtml(localized(trace.sample.answer))}</div>
+    </div>`;
+  header.querySelector("strong").textContent = "真实问题";
+  plot.appendChild(header);
+
+  const intent = document.createElement("div");
+  intent.className = "semantic-block";
+  intent.innerHTML =
+    `<strong>预测的未来意图</strong><div class="semantic-text">` +
+    trace.prediction.predicted_future_intents.map(item => escapeHtml(localized(item))).join(" · ") +
+    `</div>`;
+  plot.appendChild(intent);
+
+  const rows = [];
+  trace.evaluation_overlay.gold_memory_ids.forEach(memoryId => {
+    const node = memoryById.get(memoryId);
+    if (!node) return;
+    rows.push({
+      status: preparedIds.has(memoryId) ? "GOLD 命中" : "GOLD 未命中",
+      statusClass: preparedIds.has(memoryId) ? "status-hit" : "status-miss",
+      role: "Gold 证据",
+      summary: localized(node.summary)
+    });
+  });
+  trace.evaluation_overlay.prepared_memory_ids.forEach(memoryId => {
+    if (goldIds.has(memoryId)) return;
+    const node = memoryById.get(memoryId);
+    if (!node) return;
+    rows.push({
+      status: "已准备 / 非精确 Gold",
+      statusClass: "status-prepared",
+      role: "预备缓存",
+      summary: localized(node.summary)
+    });
+  });
+  appendSemanticTable(plot, rows);
+  document.getElementById("detail").innerHTML =
+    `<strong>仅用于评测叠加：</strong>真实问题、Golden 答案和 Gold 标签都在规划完成后加入，预测器在 pre-query 阶段不可见。`;
+  setLegend([
+    { label: "Gold 命中", color: "var(--series-2)" },
+    { label: "Gold 未命中", color: "var(--series-4)" },
+    { label: "已准备，但不是精确 Gold 证据", color: "var(--series-3)" }
+  ]);
+}
+
+function renderTimeline(controls, plot) {
+  const stages = [
+    ...trace.stage_timings.filter(item => item.stage_id !== "prepared_context"),
+    ...trace.planning_stages
+  ];
+  const maxMs = Math.max(...stages.map(item => Number(item.elapsed_ms)), 1);
+  const svg = createSvg("Planning stage latency timeline", 44 + stages.length * 38);
+  stages.forEach((stage, index) => {
+    const y = 30 + index * 38;
+    const width = Math.max(2, 650 * Number(stage.elapsed_ms) / maxMs);
+    svg.appendChild(el("text", { x: 8, y: y + 13, class: "node-label" }, stageLabels[stage.label] || stage.label));
+    svg.appendChild(el("rect", { x: 300, y, width: 650, height: 18, rx: 5, class: "bar-bg" }));
+    svg.appendChild(el("rect", { x: 300, y, width, height: 18, rx: 5, class: "timeline-bar" }));
+    svg.appendChild(el("text", { x: Math.min(960, 308 + width), y: y + 13, class: "annotation" },
+      `${Number(stage.elapsed_ms).toFixed(1)} ms`));
+  });
+  plot.appendChild(svg);
+  const calls = trace.llm_calls;
+  const totalTokens = calls.reduce((sum, call) => sum + Number(call.usage.total_tokens || 0), 0);
+  document.getElementById("detail").innerHTML =
+    `<strong>${calls.length} 次 vLLM 调用</strong> · ${totalTokens.toLocaleString()} tokens · ` +
+    `图构建属于离线/空闲阶段；当前预测与规划共耗时 ${(trace.runtime.total_planning_ms / 1000).toFixed(2)} 秒。`;
+  setLegend([{ label: "实际墙钟耗时", color: "var(--series-1)" }]);
+}
+
+function renderGraph(controls, plot) {
+  trace.graph.evolution.forEach((stage, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = graphStageLabel(stage.stage_id);
+    button.setAttribute("aria-pressed", String(index === state.graphStage));
+    button.addEventListener("click", () => { state.graphStage = index; render(); });
+    controls.appendChild(button);
+  });
+  const stage = trace.graph.evolution[state.graphStage];
+  const allNodes = memoryById;
+  const priority = node => {
+    const flags = node.flags || {};
+    return (flags.gold ? 1000 : 0) + (flags.prepared ? 500 : 0) +
+      (flags.candidate ? 200 : 0) + (flags.predicted ? 100 : 0) + Number(node.timestamp || 0) / 1000;
+  };
+  const groups = {};
+  stage.node_ids.forEach(id => {
+    const node = allNodes.get(id);
+    if (!node) return;
+    (groups[node.node_type] ||= []).push(node);
+  });
+  Object.values(groups).forEach(nodes => nodes.sort((a, b) => priority(b) - priority(a)));
+  const sampled = Object.values(groups).flatMap(nodes => nodes.slice(0, 18));
+  const sampledIds = new Set(sampled.map(node => node.id));
+  const positions = layeredPositions(sampled, 1000, 410);
+  const edgeIndices = new Set(stage.edge_indices);
+  const addedEdges = new Set(stage.added_edge_indices);
+  const svg = createSvg(`${stage.label}: ${stage.node_count} nodes and ${stage.edge_count} edges`, 430);
+  trace.graph.edges.forEach(edge => {
+    if (!edgeIndices.has(edge.index) || !sampledIds.has(edge.source) || !sampledIds.has(edge.target)) return;
+    const a = positions[edge.source], b = positions[edge.target];
+    svg.appendChild(el("line", {
+      x1: a.x, y1: a.y, x2: b.x, y2: b.y,
+      class: addedEdges.has(edge.index) ? "edge edge-new" : "edge"
+    }));
+  });
+  const addedNodes = new Set(stage.added_node_ids);
+  sampled.forEach(node => {
+    const p = positions[node.id];
+    const flags = node.flags || {};
+    const classes = ["node"];
+    if (addedNodes.has(node.id)) classes.push("node-new");
+    if (flags.gold) classes.push("node-gold");
+    svg.appendChild(el("circle", {
+      cx: p.x, cy: p.y,
+      r: flags.prepared ? 8 : 6,
+      fill: typeColor[node.node_type] || "var(--muted-foreground)",
+      class: classes.join(" ")
+    }));
+    if (flags.prepared || flags.gold) {
+      svg.appendChild(el("text", { x: p.x + 10, y: p.y + 4, class: "semantic-node-label" },
+        shortText(localized(node.summary), 28)));
+    }
+  });
+  Object.entries(positions.columns).forEach(([type, x]) => {
+    svg.appendChild(el("text", { x, y: 18, class: "axis-label", "text-anchor": "middle" }, nodeTypeLabel(type)));
+  });
+  plot.appendChild(svg);
+  const semanticRows = sampled
+    .filter(node => node.flags?.prepared || node.flags?.gold)
+    .map(node => ({
+      status: node.flags?.gold && node.flags?.prepared
+        ? "GOLD 命中"
+        : node.flags?.gold
+          ? "GOLD 未命中"
+          : "已准备",
+      statusClass: node.flags?.gold && node.flags?.prepared
+        ? "status-hit"
+        : node.flags?.gold
+          ? "status-miss"
+          : "status-prepared",
+      role: node.node_type,
+      summary: localized(node.summary)
+    }));
+  appendSemanticTable(plot, semanticRows);
+  document.getElementById("detail").innerHTML =
+    `<strong>${graphStageLabel(stage.stage_id)}</strong> · ${stage.node_count} 节点 / ${stage.edge_count} 边 · ` +
+    `每种类型最多展示 18 个节点，并优先保留 Gold 与 prepared memory。`;
+  setLegend([
+    { label: "对话轮次", color: typeColor.TurnNode },
+    { label: "会话段", color: typeColor.SegmentNode },
+    { label: "记忆", color: typeColor.MemoryNode },
+    { label: "实体", color: typeColor.EntityNode },
+    { label: "Gold 轮廓", color: "var(--series-4)" },
+    { label: "本阶段新增", color: "var(--series-3)" }
+  ]);
+}
+
+function layeredPositions(nodes, width, height) {
+  const order = ["TurnNode", "SegmentNode", "MemoryNode", "EntityNode"];
+  const groups = {};
+  nodes.forEach(node => (groups[node.node_type] ||= []).push(node));
+  const present = order.filter(type => groups[type]?.length);
+  const columns = {};
+  present.forEach((type, index) => columns[type] = 70 + index * ((width - 140) / Math.max(1, present.length - 1)));
+  const positions = { columns };
+  present.forEach(type => {
+    const list = groups[type];
+    list.forEach((node, index) => {
+      positions[node.id] = {
+        x: columns[type],
+        y: 42 + index * ((height - 64) / Math.max(1, list.length - 1))
+      };
+    });
+  });
+  return positions;
+}
+
+function renderRoute(controls, plot) {
+  const paths = trace.prepared_context.executed_paths || [];
+  if (!paths.length) {
+    plot.innerHTML = `<div class="empty">没有选择 Meta-path。</div>`;
+    setLegend([]);
+    return;
+  }
+  const label = document.createElement("label");
+  label.textContent = "当前路径 ";
+  const select = document.createElement("select");
+  paths.forEach((path, index) => {
+    const option = document.createElement("option");
+    option.value = String(index);
+    option.textContent = `${path.path_id}: ${String(path.path || "").split("->").map(item => ontologyLabel(item.trim())).join(" → ")}`;
+    option.selected = index === state.pathIndex;
+    select.appendChild(option);
+  });
+  select.addEventListener("change", () => { state.pathIndex = Number(select.value); render(); });
+  label.appendChild(select);
+  controls.appendChild(label);
+
+  const path = paths[state.pathIndex] || paths[0];
+  const conceptual = String(path.path || "").split("->").map(item => ontologyLabel(item.trim()));
+  const actual = [
+    { label: "预测意图", kind: "plain" },
+    { label: `全库记忆排名（${path.ranking?.length || 0}）`, kind: "rank" },
+    { label: `Top-k 记忆（${path.selected_memory_ids.length}）`, kind: "rank" },
+    { label: `邻接局部子图（${path.node_count} 节点）`, kind: "graph" }
+  ];
+  const svg = createSvg(`${path.path_id} conceptual path compared with actual execution`, 420);
+  svg.appendChild(el("text", { x: 8, y: 42, class: "node-label" }, "概念 Meta-path"));
+  drawLane(svg, conceptual.map(label => ({ label, kind: "plain" })), 86, false);
+  svg.appendChild(el("text", { x: 8, y: 205, class: "node-label" }, "代码真实执行路径"));
+  drawLane(svg, actual, 250, true);
+  svg.appendChild(el("text", { x: 500, y: 348, class: "annotation", "text-anchor": "middle" },
+    "只有最后的局部展开真正使用物理图边"));
+  svg.appendChild(el("text", { x: 500, y: 376, class: "annotation", "text-anchor": "middle" },
+    `选中 ${path.selected_memory_ids.length} 条路径候选记忆`));
+  plot.appendChild(svg);
+  const selectedRanks = (path.ranking || []).filter(item => item.selected);
+  appendSemanticTable(
+    plot,
+    selectedRanks.map(item => ({
+      status: goldIds.has(item.memory_id)
+        ? "GOLD"
+        : preparedIds.has(item.memory_id)
+          ? "已准备"
+          : "仅路径候选",
+      statusClass: goldIds.has(item.memory_id)
+        ? "status-hit"
+        : preparedIds.has(item.memory_id)
+          ? "status-prepared"
+          : "",
+      role: `排名 ${item.rank} · 分数 ${Number(item.score).toFixed(3)}`,
+      summary: localized(item.summary)
+    }))
+  );
+  document.getElementById("detail").innerHTML =
+    `<strong>${path.path_id} 选择原因：</strong>${escapeHtml(localized(path.reason || ""))}`;
+  setLegend([
+    { label: "文本排名步骤（不使用图边）", color: "var(--series-3)" },
+    { label: "物理图边展开", color: "var(--series-2)" }
+  ]);
+}
+
+function drawLane(svg, items, y, actualLane) {
+  const gap = 22;
+  const boxWidth = Math.min(190, (900 - gap * (items.length - 1)) / items.length);
+  const total = boxWidth * items.length + gap * (items.length - 1);
+  const start = (1000 - total) / 2;
+  items.forEach((item, index) => {
+    const x = start + index * (boxWidth + gap);
+    let boxClass = "lane-box";
+    if (item.kind === "rank") boxClass = "lane-box-rank";
+    if (item.kind === "graph") boxClass = "lane-box-graph";
+    svg.appendChild(el("rect", { x, y, width: boxWidth, height: 54, rx: 10, class: boxClass }));
+    svg.appendChild(el("text", { x: x + boxWidth / 2, y: y + 31, class: "lane-text" }, item.label));
+    if (index < items.length - 1) {
+      const graphEdge = actualLane && items[index + 1].kind === "graph";
+      svg.appendChild(el("line", {
+        x1: x + boxWidth + 3, y1: y + 27,
+        x2: x + boxWidth + gap - 4, y2: y + 27,
+        class: graphEdge ? "route-line-graph" : "route-line"
+      }));
+    }
+  });
+}
+
+function renderCompression(controls, plot) {
+  const compression = trace.prepared_context.compression || {};
+  const scores = compression.scores || [];
+  if (!scores.length) {
+    plot.innerHTML = `<div class="empty">候选数量未超过预算，因此没有压缩评分明细。</div>`;
+    document.getElementById("detail").innerHTML =
+      `<strong>${compression.reason || "未执行压缩"}</strong> · 最终缓存：` +
+      `${trace.evaluation_overlay.prepared_memory_ids.join(", ")}`;
+    setLegend([]);
+    return;
+  }
+  const maxScore = Math.max(...scores.map(item => Number(item.score)), 0.001);
+  const rows = scores.slice(0, 14);
+  const svg = createSvg("Prepared-cache candidate scores and selection", 50 + rows.length * 30);
+  rows.forEach((item, index) => {
+    const y = 24 + index * 30;
+    const width = 380 * Number(item.score) / maxScore;
+    const semanticLabel = `${item.rank}. ${shortText(localized(item.summary), 52)}`;
+    svg.appendChild(el("text", { x: 10, y: y + 13, class: "node-label" }, semanticLabel));
+    svg.appendChild(el("rect", { x: 430, y, width: 380, height: 17, rx: 4, class: "bar-bg" }));
+    svg.appendChild(el("rect", {
+      x: 430, y, width, height: 17, rx: 4,
+      class: item.selected ? "selected-bar" : "rejected-bar"
+    }));
+    svg.appendChild(el("text", { x: 820, y: y + 13, class: "annotation" }, Number(item.score).toFixed(3)));
+    const labels = [
+      item.selected ? "已准备" : "已丢弃",
+      goldIds.has(item.id) ? "GOLD" : ""
+    ].filter(Boolean).join(" · ");
+    svg.appendChild(el("text", { x: 875, y: y + 13, class: "node-label" }, labels));
+  });
+  plot.appendChild(svg);
+  document.getElementById("detail").innerHTML =
+    `<strong>预算 ${compression.budget}</strong> · ${compression.candidate_count} 个候选 → ` +
+    `${compression.final_count} 条预备记忆 · 是否使用真实问题：${compression.uses_actual_query ? "是" : "否"}`;
+  setLegend([
+    { label: "保留", color: "var(--series-2)" },
+    { label: "丢弃", color: "var(--series-5)" }
+  ]);
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+  })[char]);
+}
+
+function shortText(value, maxLength) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  return text.length <= maxLength ? text : `${text.slice(0, maxLength - 1)}…`;
+}
+
+function localized(value) {
+  const text = String(value || "");
+  return localization[text] || text;
+}
+
+function graphStageLabel(stageId) {
+  return {
+    history_structure: "1. 历史结构",
+    memory_attachment: "2. 记忆挂接",
+    entity_linking: "3. 实体连接",
+    temporal_chain: "4. 时间链",
+    similarity_links: "5. 相似度连接"
+  }[stageId] || stageId;
+}
+
+function ontologyLabel(value) {
+  return {
+    Intent: "意图",
+    UserGoal: "用户目标",
+    Idea: "想法",
+    Paper: "论文",
+    Claim: "论点",
+    Evidence: "证据",
+    Topic: "主题",
+    Gap: "缺口",
+    contradicts: "矛盾关系"
+  }[value] || value;
+}
+
+function nodeTypeLabel(value) {
+  return {
+    TurnNode: "对话轮次",
+    SegmentNode: "会话段",
+    MemoryNode: "记忆",
+    EntityNode: "实体",
+    IntentNode: "意图"
+  }[value] || value;
+}
+
+function stageMark(hit) {
+  return `<td class="text-center"><span class="stage-mark ${hit ? "stage-hit" : "stage-miss"}">` +
+    `${hit ? "✓" : "—"}</span></td>`;
+}
+
+function supportStatusLabel(value) {
+  return {
+    sufficient: "充分",
+    partial: "部分支持",
+    insufficient: "不足"
+  }[value] || value || "未知";
+}
+
+function gapTypeLabel(value) {
+  return {
+    evidence_gap: "证据缺口",
+    coverage_gap: "覆盖缺口",
+    conflict_gap: "冲突缺口",
+    freshness_gap: "时效缺口",
+    personalization_gap: "个性化缺口",
+    definition_gap: "定义缺口"
+  }[value] || value || "未知";
+}
+
+function appendSemanticTable(container, rows) {
+  if (!rows.length) return;
+  const wrapper = document.createElement("div");
+  wrapper.className = "table-wrap";
+  const table = document.createElement("table");
+  table.innerHTML = `
+    <thead><tr><th>状态</th><th>角色</th><th>语义内容</th></tr></thead>
+    <tbody>${rows.map(row => `
+      <tr>
+        <td><span class="status ${escapeHtml(row.statusClass || "")}">${escapeHtml(row.status)}</span></td>
+        <td>${escapeHtml(row.role)}</td>
+        <td class="semantic-text">${escapeHtml(row.summary)}</td>
+      </tr>`).join("")}</tbody>`;
+  wrapper.appendChild(table);
+  container.appendChild(wrapper);
+}
+
+render();
+</script>
+</body>
+</html>

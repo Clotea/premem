@@ -1,0 +1,144 @@
+{
+  "scenario_id": "conference_trip",
+  "description": "A fictional personal-assistant session used to test prediction before the next query arrives.",
+  "history": [
+    {
+      "role": "user",
+      "content": "我准备下个月去上海参加一个学术会议，先帮我记住预算和行程。"
+    },
+    {
+      "role": "assistant",
+      "content": "好的。我会记住会议、预算、航班和住宿偏好。"
+    },
+    {
+      "role": "user",
+      "content": "住宿每晚最好不超过700元，要安静，步行去会场最好别超过20分钟。"
+    },
+    {
+      "role": "assistant",
+      "content": "我记录了预算、安静程度和步行时间要求，并找到了云庭酒店和江景酒店两个候选。"
+    },
+    {
+      "role": "user",
+      "content": "机票已经订好了，7月26日下午到虹桥。酒店我们下一步再仔细比较。"
+    },
+    {
+      "role": "assistant",
+      "content": "已记录航班信息。接下来可以比较两家酒店的价格、安静程度以及到会场的距离。"
+    }
+  ],
+  "memory_nodes": [
+    {
+      "id": "m_user",
+      "type": "entity",
+      "label": "用户",
+      "content": "正在规划一次上海学术会议行程。",
+      "frequency": 10,
+      "load_ms": 8
+    },
+    {
+      "id": "m_conference",
+      "type": "event",
+      "label": "上海学术会议",
+      "content": "会议日期为7月27日至29日，会场位于上海国际会议中心。",
+      "frequency": 6,
+      "load_ms": 35
+    },
+    {
+      "id": "m_venue",
+      "type": "location",
+      "label": "上海国际会议中心",
+      "content": "会议举办地点，地址位于浦东滨江区域。",
+      "frequency": 5,
+      "load_ms": 60
+    },
+    {
+      "id": "m_hotel_constraints",
+      "type": "preference",
+      "label": "住宿偏好",
+      "content": "每晚不超过700元，环境安静，步行到会场不超过20分钟。",
+      "frequency": 8,
+      "load_ms": 25
+    },
+    {
+      "id": "m_hotel_shortlist",
+      "type": "artifact",
+      "label": "酒店候选清单",
+      "content": "候选包括云庭酒店和江景酒店，需要比较价格、噪声评价和到会场的步行距离。",
+      "frequency": 3,
+      "load_ms": 120
+    },
+    {
+      "id": "m_flight",
+      "type": "event",
+      "label": "抵达航班",
+      "content": "机票已预订，7月26日下午抵达上海虹桥机场。",
+      "frequency": 4,
+      "load_ms": 20
+    },
+    {
+      "id": "m_diet",
+      "type": "preference",
+      "label": "饮食偏好",
+      "content": "用户喜欢清淡食物，目前没有明确过敏信息。",
+      "frequency": 2,
+      "load_ms": 15
+    },
+    {
+      "id": "m_paper",
+      "type": "artifact",
+      "label": "投稿论文",
+      "content": "用户正在准备一篇关于agent memory预测的论文。",
+      "frequency": 7,
+      "load_ms": 80
+    }
+  ],
+  "memory_edges": [
+    {
+      "source": "m_user",
+      "target": "m_conference",
+      "type": "participates_in"
+    },
+    {
+      "source": "m_conference",
+      "target": "m_venue",
+      "type": "located_at"
+    },
+    {
+      "source": "m_hotel_constraints",
+      "target": "m_hotel_shortlist",
+      "type": "constrains"
+    },
+    {
+      "source": "m_hotel_shortlist",
+      "target": "m_venue",
+      "type": "compared_by_distance"
+    },
+    {
+      "source": "m_flight",
+      "target": "m_conference",
+      "type": "precedes"
+    },
+    {
+      "source": "m_flight",
+      "target": "m_hotel_shortlist",
+      "type": "next_access"
+    },
+    {
+      "source": "m_hotel_shortlist",
+      "target": "m_hotel_constraints",
+      "type": "co_access"
+    },
+    {
+      "source": "m_hotel_shortlist",
+      "target": "m_venue",
+      "type": "co_access"
+    }
+  ],
+  "hidden_next_query": "那两家候选酒店哪个离会场更近，而且符合我的预算？",
+  "gold_memory_ids": [
+    "m_hotel_shortlist",
+    "m_venue",
+    "m_hotel_constraints"
+  ]
+}

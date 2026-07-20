@@ -1,0 +1,66 @@
+PreMem latency benchmark
+Samples: 10
+vLLM: http://127.0.0.1:30000/v1
+Model: ../Qwen2.5-7B-Instruct
+Working set: gold
+Pre-query window: 500.0 ms
+Cache budget: 5
+Memory load model: base=40.0 tail=180.0 max=500.0 ms
+Generation: vLLM streaming
+
+Warmup 1/2: TTFT=76.7 ms
+Warmup 2/2: TTFT=49.9 ms
+[1/10] planning locomo_c01_tsqa_001
+[1/10] Oracle Prefetch locomo_c01_tsqa_001
+[1/10] Reactive locomo_c01_tsqa_001
+[1/10] Predictive Graph Cache locomo_c01_tsqa_001
+[2/10] planning locomo_c01_tsqa_002
+[2/10] Oracle Prefetch locomo_c01_tsqa_002
+[2/10] Reactive locomo_c01_tsqa_002
+[2/10] Predictive Graph Cache locomo_c01_tsqa_002
+[3/10] planning locomo_c01_tsqa_003
+[3/10] Predictive Graph Cache locomo_c01_tsqa_003
+[3/10] Oracle Prefetch locomo_c01_tsqa_003
+[3/10] Reactive locomo_c01_tsqa_003
+[4/10] planning locomo_c01_tsqa_004
+[4/10] Oracle Prefetch locomo_c01_tsqa_004
+[4/10] Reactive locomo_c01_tsqa_004
+[4/10] Predictive Graph Cache locomo_c01_tsqa_004
+[5/10] planning locomo_c01_tsqa_005
+[5/10] Predictive Graph Cache locomo_c01_tsqa_005
+[5/10] Reactive locomo_c01_tsqa_005
+[5/10] Oracle Prefetch locomo_c01_tsqa_005
+[6/10] planning locomo_c01_tsqa_006
+[6/10] Predictive Graph Cache locomo_c01_tsqa_006
+[6/10] Oracle Prefetch locomo_c01_tsqa_006
+[6/10] Reactive locomo_c01_tsqa_006
+[7/10] planning locomo_c01_tsqa_007
+[7/10] Reactive locomo_c01_tsqa_007
+[7/10] Oracle Prefetch locomo_c01_tsqa_007
+[7/10] Predictive Graph Cache locomo_c01_tsqa_007
+[8/10] planning locomo_c01_tsqa_008
+[8/10] Predictive Graph Cache locomo_c01_tsqa_008
+[8/10] Oracle Prefetch locomo_c01_tsqa_008
+[8/10] Reactive locomo_c01_tsqa_008
+[9/10] planning locomo_c01_tsqa_009
+[9/10] Oracle Prefetch locomo_c01_tsqa_009
+[9/10] Predictive Graph Cache locomo_c01_tsqa_009
+[9/10] Reactive locomo_c01_tsqa_009
+[10/10] planning locomo_c01_tsqa_010
+[10/10] Predictive Graph Cache locomo_c01_tsqa_010
+[10/10] Oracle Prefetch locomo_c01_tsqa_010
+[10/10] Reactive locomo_c01_tsqa_010
+
+Latency summary
+method                     p50 stall  p95 stall  p95 TTFT   p95 E2E    Ready     LatHit    FullHit   Waste
+-------------------------  ---------  ---------  ---------  ---------  --------  --------  --------  --------
+Reactive                     124.073    191.181    246.888    399.426     0.000     0.000     0.000     0.000
+Predictive Graph Cache     18216.797  24542.959  24605.497  24680.157     0.000     0.000     0.000     0.767
+Oracle Prefetch                0.057      0.148     59.060    233.964     1.000     1.000     1.000     0.000
+
+Headroom / effect
+Oracle p95 stall reduction: 99.9%
+Predictive hidden latency ratio: -12737.6%
+Predictive p95 TTFT reduction: -9866.3%
+
+JSON report: /home/yanghaotong/premem/code/outputs/latency_reader_v2/latency_qwen_graphcache_b5_w500_c4_limit10.json

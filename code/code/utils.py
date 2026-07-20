@@ -7,6 +7,13 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
+try:
+    from nltk.stem import PorterStemmer as _NltkPorterStemmer  # type: ignore
+except ImportError:
+    _NltkPorterStemmer = None
+
+_OFFICIAL_PORTER = _NltkPorterStemmer() if _NltkPorterStemmer is not None else None
+
 
 STOPWORDS = {
     "the",
@@ -76,6 +83,7 @@ class Turn:
     segment_summary: str
     text: str
     memories: List[Dict[str, Any]] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, Any]) -> "Turn":
@@ -87,6 +95,7 @@ class Turn:
             segment_summary=str(raw.get("segment_summary") or ""),
             text=str(raw.get("text") or ""),
             memories=list(raw.get("memories") or []),
+            metadata=dict(raw.get("metadata") or {}),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -418,6 +427,15 @@ def average(rows: Sequence[Mapping[str, Any]], key: str) -> float:
     return sum(safe_float(row.get(key), 0.0) for row in rows) / len(rows)
 
 
+def average_present(rows: Sequence[Mapping[str, Any]], key: str) -> Optional[float]:
+    values = [
+        safe_float(row.get(key))
+        for row in rows
+        if row.get(key) is not None
+    ]
+    return sum(values) / len(values) if values else None
+
+
 def estimate_cost(
     history: Sequence[Turn],
     query: str,
@@ -478,7 +496,124 @@ def _locomo_tokens(text: Any) -> List[str]:
     value = str(text or "").lower().replace(",", "")
     value = re.sub(r"[^a-z0-9\s]+", " ", value)
     value = re.sub(r"\b(a|an|the|and)\b", " ", value)
-    return [token for token in value.split() if token]
+    return [
+        _OFFICIAL_PORTER.stem(token) if _OFFICIAL_PORTER is not None else _porter_stem(token)
+        for token in value.split()
+        if token
+    ]
+
+
+def _porter_stem(word: str) -> str:
+    """Compact Porter stemmer used by the official LoCoMo token-F1 protocol."""
+    if len(word) <= 2:
+        return word
+
+    def consonant(index: int) -> bool:
+        char = word[index]
+        if char in "aeiou":
+            return False
+        if char == "y":
+            return index == 0 or not consonant(index - 1)
+        return True
+
+    def measure(stem: str) -> int:
+        nonlocal word
+        old = word
+        word = stem
+        pattern = "".join("c" if consonant(i) else "v" for i in range(len(word)))
+        word = old
+        return len(re.findall(r"vc", pattern))
+
+    def has_vowel(stem: str) -> bool:
+        nonlocal word
+        old = word
+        word = stem
+        result = any(not consonant(i) for i in range(len(word)))
+        word = old
+        return result
+
+    def cvc(stem: str) -> bool:
+        nonlocal word
+        if len(stem) < 3:
+            return False
+        old = word
+        word = stem
+        result = (
+            consonant(len(stem) - 3)
+            and not consonant(len(stem) - 2)
+            and consonant(len(stem) - 1)
+            and stem[-1] not in "wxy"
+        )
+        word = old
+        return result
+
+    def replace(suffix: str, replacement: str, minimum: int = 0) -> bool:
+        nonlocal word
+        if word.endswith(suffix) and measure(word[: -len(suffix)]) > minimum:
+            word = word[: -len(suffix)] + replacement
+            return True
+        return False
+
+    if word.endswith("sses"):
+        word = word[:-2]
+    elif word.endswith("ies"):
+        word = word[:-2]
+    elif word.endswith("ss"):
+        pass
+    elif word.endswith("s"):
+        word = word[:-1]
+
+    changed = False
+    if word.endswith("eed"):
+        if measure(word[:-3]) > 0:
+            word = word[:-1]
+    elif word.endswith("ed") and has_vowel(word[:-2]):
+        word, changed = word[:-2], True
+    elif word.endswith("ing") and has_vowel(word[:-3]):
+        word, changed = word[:-3], True
+    if changed:
+        if word.endswith(("at", "bl", "iz")):
+            word += "e"
+        elif len(word) >= 2 and word[-1] == word[-2] and word[-1] not in "lsz":
+            word = word[:-1]
+        elif measure(word) == 1 and cvc(word):
+            word += "e"
+    if word.endswith("y") and has_vowel(word[:-1]):
+        word = word[:-1] + "i"
+
+    for suffix, replacement in {
+        "ational": "ate", "tional": "tion", "enci": "ence", "anci": "ance",
+        "izer": "ize", "abli": "able", "alli": "al", "entli": "ent",
+        "eli": "e", "ousli": "ous", "ization": "ize", "ation": "ate",
+        "ator": "ate", "alism": "al", "iveness": "ive", "fulness": "ful",
+        "ousness": "ous", "aliti": "al", "iviti": "ive", "biliti": "ble",
+        "logi": "log",
+    }.items():
+        if replace(suffix, replacement):
+            break
+    for suffix, replacement in {
+        "icate": "ic", "ative": "", "alize": "al", "iciti": "ic",
+        "ical": "ic", "ful": "", "ness": "",
+    }.items():
+        if replace(suffix, replacement):
+            break
+    for suffix in (
+        "al", "ance", "ence", "er", "ic", "able", "ible", "ant", "ement",
+        "ment", "ent", "ion", "ou", "ism", "ate", "iti", "ous", "ive", "ize",
+    ):
+        if not word.endswith(suffix):
+            continue
+        stem = word[:-len(suffix)]
+        if measure(stem) > 1 and (suffix != "ion" or stem.endswith(("s", "t"))):
+            word = stem
+        break
+    if word.endswith("e"):
+        stem = word[:-1]
+        if measure(stem) > 1 or (measure(stem) == 1 and not cvc(stem)):
+            word = stem
+    if word.endswith("ll") and measure(word) > 1:
+        word = word[:-1]
+    return word
 
 
 def _locomo_single_f1(prediction: str, gold: str) -> float:

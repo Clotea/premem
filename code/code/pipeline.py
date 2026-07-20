@@ -1,14 +1,22 @@
 from __future__ import annotations
 
+import json
 from time import perf_counter
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from .gap_reasoning import build_prepared_context, verify_prepared_context
+from .evaluators import judge_answer
 from .graph_store import (
     EDGE_SIMILAR_TO,
     EDGE_TEMPORAL_NEXT,
     GraphStore,
     build_memory_graph,
+)
+from .multi_intent_cache import (
+    build_multi_intent_bundle,
+    merge_with_reactive_results,
+    public_bundle_trace,
+    route_multi_intent_query,
 )
 from .predictors import MemoryNeedPredictor
 from .utils import (
@@ -18,6 +26,7 @@ from .utils import (
     Turn,
     WorkingCache,
     average,
+    average_present,
     compute_activation_metrics,
     estimate_cost,
     estimate_importance,
@@ -34,6 +43,7 @@ from .utils import (
     seeded_pick,
     truncate,
 )
+from .temporal import canonicalize_relative_answer, temporal_context_lines
 from .vllm_client import VLLMClient, VLLMError
 
 
@@ -42,10 +52,14 @@ METHODS = [
     "Recency Cache",
     "Reactive Vector Retrieval",
     "Reactive Graph Retrieval",
+    "LongMemEval-style Full-History Prompting",
     "LLM-Predict Cache Only",
     "Pre-query Prepared + Reader",
+    "Multi-Intent Prepared + Adaptive Router",
     "LLM-Predict + Fallback",
-    "Oracle Cache",
+    "Budgeted Oracle Cache",
+    "MemoryNode Oracle",
+    "Raw Evidence Oracle",
 ]
 
 
@@ -71,6 +85,10 @@ def memory_writer(history: Sequence[Turn]) -> List[MemoryNode]:
                     source_turn_id=turn.id,
                     timestamp=turn.timestamp,
                     importance=float(raw.get("importance") or estimate_importance(content)),
+                    metadata={
+                        **dict(turn.metadata or {}),
+                        **dict(raw.get("metadata") or {}),
+                    },
                 )
             )
     return memories
@@ -248,25 +266,36 @@ def generate_reader_answer(
     memories: Sequence[MemoryNode],
     llm_client: Optional[VLLMClient] = None,
     config: Optional[Mapping[str, Any]] = None,
+    sample: Optional[Sample] = None,
+    reader_trace: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Universal downstream QA reader over pre-query prepared memories."""
     config = config or {}
     reader_config = dict(config.get("qa_reader") or {})
     if not memories:
+        if reader_trace is not None:
+            reader_trace.update({"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0})
         return "No information available."
 
     if llm_client is None:
+        if reader_trace is not None:
+            reader_trace.update({"provider": "heuristic", "context_count": len(memories)})
         return " ".join(memory.summary for memory in memories)
 
     max_memories = int(reader_config.get("max_memories") or 12)
     sorted_memories = sorted(memories, key=lambda item: item.timestamp)[:max_memories]
     context_lines = []
     for memory in sorted_memories:
+        protocol_lines = temporal_context_lines(memory.metadata)
+        protocol = "\n    ".join(protocol_lines)
         context_lines.append(
-            "[{id} | turn={turn} | time={time}] {content}".format(
+            "[{id} | turn={turn} | ordinal={time}]\n"
+            "    {protocol}\n"
+            "    memory: {content}".format(
                 id=memory.id,
                 turn=memory.source_turn_id,
                 time=memory.timestamp,
+                protocol=protocol or "session datetime: unavailable",
                 content=memory.content,
             )
         )
@@ -279,7 +308,11 @@ def generate_reader_answer(
                 "Use only the supplied prepared memories. Return only the shortest "
                 "answer phrase or sentence. Copy exact wording from the memories "
                 "when possible. If the memories do not contain the answer, return "
-                "\"No information available.\""
+                "\"No information available.\" Dates in the deterministic-time "
+                "annotations are authoritative: answer temporal questions with the "
+                "resolved absolute date or displayed period, never with yesterday, "
+                "last week, last Saturday, or next month. Image query/caption fields "
+                "are evidence, not decoration."
             ),
         },
         {
@@ -288,25 +321,121 @@ def generate_reader_answer(
                 "Prepared memories:\n"
                 f"{context}\n\n"
                 f"Question: {query}\n\n"
+                f"Question reference datetime: "
+                f"{(sample.metadata.get('reference_date_time') if sample else None) or 'unavailable'}\n\n"
                 "Answer:"
             ),
         },
     ]
+    if reader_trace is not None:
+        reader_trace.update(
+            {
+                "provider": "vllm",
+                "prompt_characters": sum(len(item["content"]) for item in messages),
+                "context_count": len(sorted_memories),
+            }
+        )
     try:
         answer, _usage = llm_client.chat(
             messages,
             temperature=float(reader_config.get("temperature") or 0.0),
             max_tokens=int(reader_config.get("max_tokens") or 128),
         )
+        if reader_trace is not None:
+            reader_trace.update(dict(_usage or {}))
         answer = answer.strip()
         if answer:
             if "ANSWER:" in answer:
                 answer = answer.rsplit("ANSWER:", 1)[-1].strip()
-            return answer
+            return canonicalize_relative_answer(answer, sorted_memories)
     except VLLMError:
         if not bool(reader_config.get("fallback_to_heuristic", True)):
             raise
     return " ".join(memory.summary for memory in memories)
+
+
+def generate_full_history_prompt_answer(
+    sample: Sample,
+    llm_client: Optional[VLLMClient],
+    config: Mapping[str, Any],
+) -> Dict[str, Any]:
+    """LongMemEval-style long-context prompting adapted to LoCoMo turns."""
+    baseline_config = dict(config.get("full_history_prompting") or {})
+    sessions: List[Dict[str, Any]] = []
+    current_by_id: Dict[str, Dict[str, Any]] = {}
+    for turn in sample.history:
+        session = current_by_id.get(turn.segment_id)
+        if session is None:
+            session = {
+                "session_id": turn.segment_id,
+                "timestamp": turn.metadata.get("session_date_time") or turn.segment_summary,
+                "turns": [],
+            }
+            current_by_id[turn.segment_id] = session
+            sessions.append(session)
+        item: Dict[str, Any] = {
+            "speaker": turn.speaker,
+            "content": turn.metadata.get("raw_text") or turn.text,
+        }
+        if turn.metadata.get("image_query"):
+            item["image_query"] = turn.metadata["image_query"]
+        if turn.metadata.get("blip_caption"):
+            item["image_caption"] = turn.metadata["blip_caption"]
+        session["turns"].append(item)
+
+    history_json = json.dumps(sessions, ensure_ascii=False, separators=(",", ":"))
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You answer questions about a timestamped conversation history. "
+                "First identify the relevant sessions and facts, then reason over "
+                "them internally. Use only the history. Return only the shortest "
+                "final answer, without reasoning. If unsupported, return "
+                "\"No information available.\" Resolve relative dates using the "
+                "timestamp of the session containing the statement."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"Timestamped conversation history (JSON):\n{history_json}\n\n"
+                f"Question: {sample.question}\n\nAnswer:"
+            ),
+        },
+    ]
+    trace: Dict[str, Any] = {
+        "baseline": "LongMemEval-style full-history-session / JSON / con",
+        "adaptation_dataset": "LoCoMo",
+        "history_turn_count": len(sample.history),
+        "history_session_count": len(sessions),
+        "prompt_characters": sum(len(item["content"]) for item in messages),
+        "uses_retrieval": False,
+        "uses_prequery_planning": False,
+    }
+    started = perf_counter()
+    if llm_client is None:
+        answer = "No information available."
+        trace["provider"] = "unavailable"
+    else:
+        try:
+            answer, usage = llm_client.chat(
+                messages,
+                temperature=float(baseline_config.get("temperature") or 0.0),
+                max_tokens=int(baseline_config.get("max_tokens") or 128),
+            )
+            trace.update(dict(usage or {}))
+            trace["provider"] = "vllm"
+        except VLLMError:
+            if not bool(baseline_config.get("fallback_to_heuristic", False)):
+                raise
+            answer = "No information available."
+            trace["provider"] = "fallback"
+    trace["reader_e2e_latency_ms"] = _elapsed_ms(started)
+    answer = str(answer or "").strip()
+    if "ANSWER:" in answer:
+        answer = answer.rsplit("ANSWER:", 1)[-1].strip()
+    return {"answer": answer or "No information available.", "reader_trace": trace}
 
 
 def label_gold_evidence(
@@ -332,12 +461,47 @@ def label_gold_evidence(
     return evidence
 
 
+def raw_evidence_memories(sample: Sample) -> List[MemoryNode]:
+    """Build an uncompressed oracle context directly from annotated source turns."""
+    gold_turn_ids = set(str(item) for item in sample.gold_evidence_turn_ids)
+    selected: List[MemoryNode] = []
+    for turn in sample.history:
+        if turn.id not in gold_turn_ids:
+            continue
+        metadata = dict(turn.metadata or {})
+        evidence_parts = [f"{turn.speaker}: {metadata.get('raw_text') or turn.text}"]
+        if metadata.get("image_query"):
+            evidence_parts.append(f"image query: {metadata['image_query']}")
+        if metadata.get("blip_caption"):
+            evidence_parts.append(f"image caption: {metadata['blip_caption']}")
+        content = "\n".join(evidence_parts)
+        selected.append(
+            MemoryNode(
+                id=f"raw_{turn.id}",
+                memory_type=infer_memory_type(content),
+                content=content,
+                summary=content,
+                keywords=extract_keywords(content, 20),
+                entities=extract_entities(content),
+                segment_id=turn.segment_id,
+                source_turn_id=turn.id,
+                timestamp=turn.timestamp,
+                importance=1.0,
+                metadata=metadata,
+            )
+        )
+    return selected
+
+
 def run_evaluation(
     samples: Sequence[Sample],
     config: Mapping[str, Any],
     predictor: MemoryNeedPredictor,
     llm_client: Optional[VLLMClient] = None,
+    judge_client: Optional[VLLMClient] = None,
 ) -> List[Dict[str, Any]]:
+    config = dict(config)
+    config["_judge_client"] = judge_client
     results: Dict[str, List[Dict[str, Any]]] = {method: [] for method in METHODS}
     context_cache: Dict[str, Dict[str, Any]] = {}
 
@@ -395,6 +559,17 @@ def run_evaluation(
                     config=config,
                 )
                 cache.metadata["prepared_context"] = prepared_context
+            multi_config = dict(config.get("multi_intent_cache") or {})
+            if bool(multi_config.get("enabled", True)):
+                multi_graph = graph.clone()
+                cache.metadata["multi_intent_bundle"] = build_multi_intent_bundle(
+                    context_key=context_key,
+                    history=sample.history,
+                    memory_nodes=memory_nodes,
+                    graph=multi_graph,
+                    prediction=prediction,
+                    config=config,
+                )
             context = {"memory_nodes": memory_nodes, "graph": graph, "cache": cache}
             context_cache[context_key] = context
 
@@ -452,6 +627,34 @@ def run_evaluation(
             llm_client=llm_client,
             query_retrieval_latency_ms=graph_retrieval_latency_ms,
         )
+
+        if bool((config.get("full_history_prompting") or {}).get("enabled", False)):
+            full_history_result = generate_full_history_prompt_answer(
+                sample,
+                llm_client,
+                config,
+            )
+            _evaluate_retrieval_method(
+                method="LongMemEval-style Full-History Prompting",
+                sample=sample,
+                selected=memory_nodes,
+                activated=[memory.id for memory in memory_nodes],
+                evidence=evidence,
+                fallback_used=False,
+                idle_prediction_used=False,
+                results=results,
+                config=config,
+                llm_client=llm_client,
+                answer_mode="full_history_prompt",
+                answer_override=str(full_history_result["answer"]),
+                reader_trace_override=dict(full_history_result["reader_trace"]),
+                query_retrieval_latency_ms=0.0,
+                extra={
+                    "uses_full_history": True,
+                    "uses_query_for_retrieval": False,
+                    "uses_prequery_planning": False,
+                },
+            )
 
         retrieval_start = perf_counter()
         verified = verify_cache(
@@ -559,6 +762,127 @@ def run_evaluation(
             query_retrieval_latency_ms=prequery_retrieval_latency_ms,
         )
 
+        multi_bundle = cache.metadata.get("multi_intent_bundle")
+        if multi_bundle:
+            retrieval_start = perf_counter()
+            multi_route = route_multi_intent_query(
+                query=sample.question,
+                bundle=multi_bundle,
+                memory_nodes=memory_nodes,
+                config=config,
+            )
+            multi_decision = str(multi_route.get("decision") or "native_rag")
+            multi_prepared_ids = [
+                memory_id
+                for memory_id in multi_route.get("prepared_memory_ids") or []
+                if memory_id in memory_by_id
+            ]
+            reactive_repair_ids: List[str] = []
+            if multi_decision in {"partial_repair", "native_rag"}:
+                reactive_candidates = fallback_retrieve(
+                    sample.question,
+                    graph,
+                    memory_nodes,
+                    config,
+                )
+                if multi_decision == "partial_repair":
+                    repair_k = max(1, int(multi_route.get("repair_top_k") or 1))
+                    reader_config = dict(config.get("qa_reader") or {})
+                    reader_limit = max(
+                        len(multi_prepared_ids),
+                        int(reader_config.get("max_memories") or 12),
+                    )
+                    retrieval_limit = min(
+                        reader_limit,
+                        len(multi_prepared_ids) + repair_k,
+                    )
+                    multi_selected, reactive_repair_ids = merge_with_reactive_results(
+                        prepared_ids=multi_prepared_ids,
+                        reactive_memories=reactive_candidates,
+                        memory_nodes=memory_nodes,
+                        limit=retrieval_limit,
+                    )
+                else:
+                    multi_selected = list(reactive_candidates[:retrieval_top_k])
+                    reactive_repair_ids = [memory.id for memory in multi_selected]
+            else:
+                multi_selected = [
+                    memory_by_id[memory_id]
+                    for memory_id in multi_prepared_ids[:retrieval_top_k]
+                ]
+            multi_retrieval_latency_ms = _elapsed_ms(retrieval_start)
+            multi_physical_ids = [
+                memory_id
+                for memory_id in multi_bundle.get("physical_memory_ids") or []
+                if memory_id in memory_by_id
+            ]
+            multi_proactive_metrics = compute_activation_metrics(
+                multi_physical_ids,
+                evidence,
+            )
+            multi_final_metrics = compute_activation_metrics(
+                [memory.id for memory in multi_selected],
+                evidence,
+            )
+            multi_trace = {
+                "sample": {
+                    "sample_id": sample.id,
+                    "actual_query": sample.question,
+                    "gold_answer": sample.answer,
+                    "gold_evidence_memory_ids": list(evidence),
+                    "gold_evidence_memories": memory_refs(evidence, memory_nodes),
+                },
+                "idle_time_planning": public_bundle_trace(multi_bundle),
+                "query_time_routing": multi_route,
+                "final_selection": {
+                    "decision": multi_decision,
+                    "selected_head_ids": list(multi_route.get("selected_head_ids") or []),
+                    "prepared_memory_ids": multi_prepared_ids,
+                    "reactive_repair_memory_ids": reactive_repair_ids,
+                    "final_memory_ids": [memory.id for memory in multi_selected],
+                    "final_memories": memory_refs(
+                        [memory.id for memory in multi_selected],
+                        memory_nodes,
+                    ),
+                    "metrics": multi_final_metrics,
+                },
+            }
+            _evaluate_retrieval_method(
+                method="Multi-Intent Prepared + Adaptive Router",
+                sample=sample,
+                selected=multi_selected,
+                activated=None,
+                evidence=evidence,
+                fallback_used=multi_decision in {"partial_repair", "native_rag"},
+                idle_prediction_used=True,
+                results=results,
+                config=config,
+                llm_client=llm_client,
+                answer_mode="qa_reader",
+                extra={
+                    "route_decision": multi_decision,
+                    "selected_head_ids": list(multi_route.get("selected_head_ids") or []),
+                    "reactive_repair_memory_ids": reactive_repair_ids,
+                    "prepared_physical_memory_ids": multi_physical_ids,
+                    "prepared_physical_cache_size": len(multi_physical_ids),
+                    "logical_branch_memory_count": int(
+                        multi_bundle.get("logical_branch_memory_count") or 0
+                    ),
+                    "shared_memory_ids": list(multi_bundle.get("shared_memory_ids") or []),
+                    "shared_fact_ids": list(multi_bundle.get("shared_fact_ids") or []),
+                    "proactive_precision": multi_proactive_metrics["precision"],
+                    "proactive_recall": multi_proactive_metrics["recall"],
+                    "proactive_hit_rate": multi_proactive_metrics["hit_rate"],
+                    "proactive_full_cover_rate": multi_proactive_metrics["full_cover_rate"],
+                    "proactive_wasted_rate": multi_proactive_metrics["wasted_rate"],
+                    "uses_query_for_preparation": False,
+                    "uses_query_for_routing": True,
+                    "reader_uses_query": True,
+                    "multi_intent_trace": multi_trace,
+                },
+                query_retrieval_latency_ms=multi_retrieval_latency_ms,
+            )
+
         fallback_retrieval_latency_ms = 0.0
         if verified["sufficient"]:
             selected = verified["memories"]
@@ -616,7 +940,7 @@ def run_evaluation(
         oracle_selected = [memory for memory in memory_nodes if memory.id in set(oracle_ids)]
         oracle_retrieval_latency_ms = _elapsed_ms(retrieval_start)
         _evaluate_retrieval_method(
-            method="Oracle Cache",
+            method="Budgeted Oracle Cache",
             sample=sample,
             selected=oracle_selected,
             activated=oracle_ids,
@@ -628,6 +952,48 @@ def run_evaluation(
             llm_client=llm_client,
             query_retrieval_latency_ms=oracle_retrieval_latency_ms,
             extra={"oracle_uses_gold_evidence": True},
+        )
+
+        full_oracle_selected = [
+            memory for memory in memory_nodes if memory.id in set(evidence)
+        ]
+        _evaluate_retrieval_method(
+            method="MemoryNode Oracle",
+            sample=sample,
+            selected=full_oracle_selected,
+            activated=evidence,
+            evidence=evidence,
+            fallback_used=False,
+            idle_prediction_used=False,
+            results=results,
+            config=config,
+            llm_client=llm_client,
+            query_retrieval_latency_ms=0.0,
+            extra={
+                "oracle_uses_gold_evidence": True,
+                "oracle_budget_limited": False,
+                "oracle_available": bool(evidence),
+            },
+        )
+
+        raw_oracle_selected = raw_evidence_memories(sample)
+        _evaluate_retrieval_method(
+            method="Raw Evidence Oracle",
+            sample=sample,
+            selected=raw_oracle_selected,
+            activated=evidence,
+            evidence=evidence,
+            fallback_used=False,
+            idle_prediction_used=False,
+            results=results,
+            config=config,
+            llm_client=llm_client,
+            query_retrieval_latency_ms=0.0,
+            extra={
+                "oracle_uses_raw_annotated_turns": True,
+                "oracle_budget_limited": False,
+                "oracle_available": bool(raw_oracle_selected),
+            },
         )
 
         if show_progress:
@@ -854,16 +1220,35 @@ def _evaluate_retrieval_method(
     extra: Optional[Mapping[str, Any]] = None,
     answer_mode: str = "default",
     query_retrieval_latency_ms: Optional[float] = None,
+    answer_override: Optional[str] = None,
+    reader_trace_override: Optional[Mapping[str, Any]] = None,
 ) -> None:
     reader_config = dict(config.get("qa_reader") or {})
     use_reader = answer_mode == "qa_reader" or (
         answer_mode == "default" and bool(reader_config.get("use_for_all_methods", False))
     )
-    effective_answer_mode = "qa_reader" if use_reader else "default"
-    if use_reader:
-        answer = generate_reader_answer(sample.question, selected, llm_client=llm_client, config=config)
+    effective_answer_mode = (
+        answer_mode if answer_override is not None else ("qa_reader" if use_reader else "default")
+    )
+    reader_trace: Dict[str, Any] = dict(reader_trace_override or {})
+    reader_started = perf_counter()
+    if answer_override is not None:
+        answer = answer_override
+    elif use_reader:
+        answer = generate_reader_answer(
+            sample.question,
+            selected,
+            llm_client=llm_client,
+            config=config,
+            sample=sample,
+            reader_trace=reader_trace,
+        )
     else:
         answer = generate_answer(sample.question, selected, llm_client=llm_client, config=config)
+    reader_e2e_latency_ms = float(
+        reader_trace.get("reader_e2e_latency_ms")
+        or _elapsed_ms(reader_started)
+    )
     selected_ids = [memory.id for memory in selected]
     activation = compute_activation_metrics(
         activated if activated is not None else selected_ids,
@@ -877,8 +1262,36 @@ def _evaluate_retrieval_method(
         idle_prediction_used=idle_prediction_used,
         fallback_used=fallback_used,
     )
+    category = sample.metadata.get("category")
+    category_names = {
+        1: "multi_hop",
+        2: "temporal",
+        3: "open_domain",
+        4: "single_hop",
+        5: "adversarial_unanswerable",
+    }
+    judge_config = dict((config.get("evaluation") or {}).get("judge") or {})
+    judge_methods = set(judge_config.get("methods") or [])
+    run_judge = bool(judge_config.get("enabled", False)) and (
+        not judge_methods or method in judge_methods
+    )
+    judge_client = config.get("_judge_client")
+    judge_details: Dict[str, Any] = {}
+    for protocol in judge_config.get("protocols") or ["mem0_paper_v1"]:
+        if run_judge:
+            judge_details[str(protocol)] = judge_answer(
+                question=sample.question,
+                reference=sample.answer,
+                candidate=answer,
+                category=category,
+                client=judge_client if isinstance(judge_client, VLLMClient) else None,
+                protocol=str(protocol),
+                config=judge_config,
+            )
     row = {
         "sample_id": sample.id,
+        "category": category,
+        "category_name": category_names.get(int(category or 0), "unknown"),
         "precision": activation["precision"],
         "recall": activation["recall"],
         "hit_rate": activation["hit_rate"],
@@ -886,12 +1299,22 @@ def _evaluate_retrieval_method(
         "wasted_rate": activation["wasted_rate"],
         "fallback_rate": 1.0 if fallback_used else 0.0,
         "f1": f1_score(answer, sample.answer),
-        "official_f1": locomo_answer_f1(answer, sample.answer, sample.metadata.get("category")),
+        "official_f1": locomo_answer_f1(answer, sample.answer, category),
+        "temporal_f1": locomo_answer_f1(answer, sample.answer, category) if str(category) == "2" else None,
         "bleu1": bleu1_score(answer, sample.answer),
         "rouge_l": rouge_l(answer, sample.answer),
-        "llm_judge": pseudo_judge(answer, sample.answer),
+        "pseudo_judge": pseudo_judge(answer, sample.answer),
+        "llm_judge": (judge_details.get("mem0_paper_v1") or {}).get("score"),
+        "strict_judge": (judge_details.get("longmemeval_strict_v1") or {}).get("score"),
+        "judge_details": judge_details,
         "faithfulness": faithfulness(answer, selected),
         "query_retrieval_latency_ms": float(query_retrieval_latency_ms or 0.0),
+        "reader_e2e_latency_ms": reader_e2e_latency_ms,
+        "reader_prompt_tokens": reader_trace.get("prompt_tokens"),
+        "reader_completion_tokens": reader_trace.get("completion_tokens"),
+        "reader_total_tokens": reader_trace.get("total_tokens"),
+        "reader_prompt_characters": reader_trace.get("prompt_characters"),
+        "reader_trace": reader_trace,
         "query_time_latency_ms": costs["query_time_latency_ms"],
         "idle_time_cost": costs["idle_time_cost"],
         "total_tokens": costs["total_tokens"],
@@ -900,6 +1323,7 @@ def _evaluate_retrieval_method(
         "generated_answer": answer,
         "gold_answer": sample.answer,
         "answer_mode": effective_answer_mode,
+        "reference_date_time": sample.metadata.get("reference_date_time"),
     }
     if extra:
         row.update(dict(extra))
@@ -909,6 +1333,8 @@ def _evaluate_retrieval_method(
 def _summarize(results: Mapping[str, Sequence[Mapping[str, Any]]], budget: int) -> List[Dict[str, Any]]:
     summary = []
     for method, rows in results.items():
+        if not rows:
+            continue
         summary.append(
             {
                 "method": method,
@@ -922,15 +1348,40 @@ def _summarize(results: Mapping[str, Sequence[Mapping[str, Any]]], budget: int) 
                 "selected_count": average(rows, "selected_count"),
                 "f1": average(rows, "f1"),
                 "official_f1": average(rows, "official_f1"),
+                "temporal_f1": average_present(
+                    [row for row in rows if str(row.get("category")) == "2"],
+                    "temporal_f1",
+                ),
                 "bleu1": average(rows, "bleu1"),
                 "rouge_l": average(rows, "rouge_l"),
-                "llm_judge": average(rows, "llm_judge"),
+                "pseudo_judge": average(rows, "pseudo_judge"),
+                "llm_judge": average_present(rows, "llm_judge"),
+                "strict_judge": average_present(rows, "strict_judge"),
                 "faithfulness": average(rows, "faithfulness"),
                 "query_retrieval_latency_ms": average(rows, "query_retrieval_latency_ms"),
+                "reader_e2e_latency_ms": average(rows, "reader_e2e_latency_ms"),
+                "reader_prompt_tokens": average_present(rows, "reader_prompt_tokens"),
+                "reader_total_tokens": average_present(rows, "reader_total_tokens"),
                 "query_time_latency_ms": average(rows, "query_time_latency_ms"),
                 "idle_time_cost": average(rows, "idle_time_cost"),
                 "total_tokens": average(rows, "total_tokens"),
                 "samples": list(rows),
+                "by_category": {
+                    str(category): {
+                        "count": len(category_rows),
+                        "official_f1": average(category_rows, "official_f1"),
+                        "llm_judge": average_present(category_rows, "llm_judge"),
+                        "strict_judge": average_present(category_rows, "strict_judge"),
+                        "recall": average(category_rows, "recall"),
+                        "full_cover_rate": average(category_rows, "full_cover_rate"),
+                    }
+                    for category in sorted(
+                        {str(row.get("category")) for row in rows}
+                    )
+                    for category_rows in [[
+                        row for row in rows if str(row.get("category")) == category
+                    ]]
+                },
             }
         )
     return summary

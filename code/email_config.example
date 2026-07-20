@@ -1,0 +1,17 @@
+# Copy the needed exports into your shell. Never commit a real authorization code.
+#
+# QQ Mail example:
+export EMAIL_PROVIDER=qq
+export EMAIL_USER='your_account@qq.com'
+export EMAIL_AUTH_CODE='your_smtp_authorization_code'
+export EMAIL_TO='recipient@example.com'
+#
+# Optional:
+# export EMAIL_FROM="${EMAIL_USER}"
+# export SMTP_TIMEOUT=20
+#
+# For custom SMTP instead of a provider preset:
+# export EMAIL_PROVIDER=custom
+# export SMTP_HOST='smtp.example.com'
+# export SMTP_PORT=465
+# export SMTP_SECURITY=ssl

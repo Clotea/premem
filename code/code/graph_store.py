@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Sequence
 
@@ -11,12 +12,17 @@ NODE_MEMORY = "MemoryNode"
 NODE_TURN = "TurnNode"
 NODE_SEGMENT = "SegmentNode"
 NODE_ENTITY = "EntityNode"
+NODE_INTENT = "IntentNode"
+NODE_FACT = "FactNode"
 
 EDGE_DERIVED_FROM = "derived_from"
 EDGE_BELONGS_TO = "belongs_to"
 EDGE_MENTIONS = "mentions"
 EDGE_SIMILAR_TO = "similar_to"
 EDGE_TEMPORAL_NEXT = "temporal_next"
+EDGE_INTENT_ACTIVATES = "intent_activates"
+EDGE_TARGETS_FACT = "targets_fact"
+EDGE_EXPRESSES_FACT = "expresses_fact"
 
 
 @dataclass
@@ -49,6 +55,12 @@ class GraphStore:
 
     def add_edge(self, source: str, target: str, edge_type: str) -> None:
         self.edges.append(Edge(source=source, target=target, edge_type=edge_type))
+
+    def clone(self) -> "GraphStore":
+        cloned = GraphStore()
+        cloned.nodes = deepcopy(self.nodes)
+        cloned.edges = [Edge(edge.source, edge.target, edge.edge_type) for edge in self.edges]
+        return cloned
 
     def neighbors(self, node_id: str, edge_types: Iterable[str] | None = None) -> List[str]:
         allowed = set(edge_types) if edge_types else None

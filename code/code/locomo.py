@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import random
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence
@@ -27,6 +28,7 @@ if __package__ in {None, ""}:
         estimate_importance,
     )
     from code.vllm_client import VLLMClient
+    from code.temporal import resolve_temporal_mentions
 else:
     from .pipeline import run_evaluation
     from .predictors import create_predictor
@@ -44,6 +46,7 @@ else:
         estimate_importance,
     )
     from .vllm_client import VLLMClient
+    from .temporal import resolve_temporal_mentions
 
 
 LOCOMO_URL = "https://raw.githubusercontent.com/snap-research/locomo/main/data/locomo10.json"
@@ -53,6 +56,8 @@ def load_locomo_samples(
     path: Path | str,
     limit: int | None = None,
     eval_mode: str = "time-sliced",
+    sample_mode: str = "head",
+    sample_seed: int = 7,
 ) -> List[Sample]:
     records = load_json(path)
     samples = convert_locomo(records, eval_mode=eval_mode)
@@ -62,7 +67,23 @@ def load_locomo_samples(
         return samples
     if limit < 0:
         raise ValueError("limit must be >= 0")
-    return samples[:limit]
+    if sample_mode == "head":
+        return samples[:limit]
+    if sample_mode != "stratified":
+        raise ValueError(f"Unsupported sample_mode: {sample_mode}")
+    grouped: Dict[str, List[Sample]] = {}
+    for sample in samples:
+        grouped.setdefault(str(sample.metadata.get("category") or "unknown"), []).append(sample)
+    rng = random.Random(sample_seed)
+    for rows in grouped.values():
+        rng.shuffle(rows)
+    selected: List[Sample] = []
+    categories = sorted(grouped)
+    while len(selected) < limit and any(grouped.values()):
+        for category in categories:
+            if grouped[category] and len(selected) < limit:
+                selected.append(grouped[category].pop())
+    return selected
 
 
 def convert_locomo(records: Sequence[Dict[str, Any]], eval_mode: str = "time-sliced") -> List[Sample]:
@@ -97,6 +118,9 @@ def convert_locomo_full_qa(records: Sequence[Dict[str, Any]]) -> List[Sample]:
                         "conversation_id": conversation_id,
                         "category": qa.get("category"),
                         "history_turn_count": len(history),
+                        "reference_date_time": (
+                            history[-1].metadata.get("session_date_time") if history else None
+                        ),
                     },
                 )
             )
@@ -147,6 +171,7 @@ def convert_locomo_time_sliced(records: Sequence[Dict[str, Any]]) -> List[Sample
                         "slice_end_index": slice_end,
                         "slice_end_turn_id": slice_end_turn_id,
                         "slice_reason": slice_reason,
+                        "reference_date_time": history[-1].metadata.get("session_date_time"),
                     },
                 )
             )
@@ -171,6 +196,7 @@ def convert_conversation(conversation: Dict[str, Any], conversation_id: str) -> 
             or conversation.get(f"session_{session_number}_date_time")
             or session_id
         )
+        session_date_time = str(conversation.get(f"session_{session_number}_date_time") or "")
         for raw_turn in conversation.get(session_key) or []:
             timestamp += 1
             text = " ".join(
@@ -181,6 +207,18 @@ def convert_conversation(conversation: Dict[str, Any], conversation_id: str) -> 
             speaker = str(raw_turn.get("speaker") or "unknown")
             turn_id = str(raw_turn.get("dia_id") or f"D{session_number}:{timestamp}")
             content = f"{speaker}: {text}"
+            raw_metadata = {
+                "session_number": session_number,
+                "session_date_time": session_date_time,
+                "raw_text": str(raw_turn.get("text") or ""),
+                "blip_caption": str(raw_turn.get("blip_caption") or ""),
+                "image_query": str(raw_turn.get("query") or ""),
+                "img_url": list(raw_turn.get("img_url") or []),
+            }
+            raw_metadata["temporal_mentions"] = resolve_temporal_mentions(
+                text,
+                session_date_time,
+            )
             turns.append(
                 Turn(
                     id=turn_id,
@@ -197,8 +235,10 @@ def convert_conversation(conversation: Dict[str, Any], conversation_id: str) -> 
                             "keywords": extract_keywords(text, 10),
                             "entities": extract_entities(text),
                             "importance": estimate_importance(text),
+                            "metadata": dict(raw_metadata),
                         }
                     ],
+                    metadata=raw_metadata,
                 )
             )
     return turns
@@ -227,7 +267,7 @@ def run_locomo_initial_test(
         api_key=llm_config.get("api_key"),
     )
     predictor = create_predictor(config, client)
-    return run_evaluation(samples, config, predictor, llm_client=client)
+    return run_evaluation(samples, config, predictor, llm_client=client, judge_client=client)
 
 
 def main() -> None:
@@ -263,6 +303,8 @@ def main() -> None:
         locomo_path,
         limit=args.limit,
         eval_mode=args.eval_mode,
+        sample_mode=args.sample_mode,
+        sample_seed=args.sample_seed,
     )
     if not samples:
         raise RuntimeError("No LoCoMo samples loaded.")
@@ -275,11 +317,27 @@ def main() -> None:
         api_key=llm_config.get("api_key"),
     )
     predictor = create_predictor(config, client)
-    summary = run_evaluation(samples, config, predictor, llm_client=client)
+    judge_config = dict((config.get("evaluation") or {}).get("judge") or {})
+    judge_client: Optional[VLLMClient] = None
+    if bool(judge_config.get("enabled", False)):
+        judge_client = VLLMClient(
+            base_url=str(judge_config.get("base_url") or client.base_url),
+            model=str(judge_config.get("model") or client.model),
+            timeout=float(judge_config.get("timeout") or llm_config.get("timeout") or 30),
+            api_key=judge_config.get("api_key") or llm_config.get("api_key"),
+        )
+    summary = run_evaluation(
+        samples,
+        config,
+        predictor,
+        llm_client=client,
+        judge_client=judge_client,
+    )
 
     print("PreAct-Memory LoCoMo Evaluation")
     print(f"Eval mode: {args.eval_mode}")
     print(f"Samples: {len(samples)}")
+    print(f"Sampling: {args.sample_mode} (seed={args.sample_seed})")
     print(f"Predictor: {getattr(predictor, 'name', config.get('predictor'))}")
     print(f"vLLM endpoint: {client.base_url}")
     print(f"vLLM model: {client.model}")
@@ -293,9 +351,9 @@ def main() -> None:
     print("\nActivation Quality")
     print(format_table(summary, ["method", "budget", "selected_count", "precision", "recall", "hit_rate", "full_cover_rate", "wasted_rate"]))
     print("\nAnswer Quality")
-    print(format_table(summary, ["method", "official_f1", "bleu1", "f1", "rouge_l", "llm_judge", "faithfulness"]))
+    print(format_table(summary, ["method", "official_f1", "temporal_f1", "bleu1", "llm_judge", "strict_judge", "faithfulness"]))
     print("\nEfficiency")
-    print(format_table(summary, ["method", "query_retrieval_latency_ms", "query_time_latency_ms", "idle_time_cost", "total_tokens", "hit_rate", "fallback_rate"]))
+    print(format_table(summary, ["method", "query_retrieval_latency_ms", "reader_e2e_latency_ms", "reader_prompt_tokens", "idle_time_cost", "hit_rate", "fallback_rate"]))
 
     if args.details or len(samples) <= 20:
         print("\nPer-Sample Selected Memories")
@@ -329,6 +387,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", default=str(code_root / "configs" / "python_demo.json"))
     parser.add_argument("--limit", type=int, default=default_limit, help="Number of QA samples. Use 0 for all.")
     parser.add_argument("--eval-mode", choices=["time-sliced", "qa"], default=default_eval_mode)
+    parser.add_argument("--sample-mode", choices=["head", "stratified"], default=os.getenv("SAMPLE_MODE", "head"))
+    parser.add_argument("--sample-seed", type=int, default=int(os.getenv("SAMPLE_SEED", "7")))
     parser.add_argument("--download-locomo", dest="download_locomo", action="store_true", default=True)
     parser.add_argument("--no-download-locomo", dest="download_locomo", action="store_false")
     parser.add_argument("--predictor", choices=["vllm", "heuristic", "auto"], default=None)
@@ -375,6 +435,7 @@ def build_trace_report(summary: Sequence[Mapping[str, Any]]) -> List[str]:
     prequery_row = rows_by_method.get("Pre-query Prepared + Reader", {})
     fallback_row = rows_by_method.get("LLM-Predict + Fallback", {})
     cache_only_row = rows_by_method.get("LLM-Predict Cache Only", {})
+    multi_intent_row = rows_by_method.get("Multi-Intent Prepared + Adaptive Router", {})
     primary_row = prequery_row or fallback_row
     cache_only_by_id = {
         str(sample.get("sample_id")): sample
@@ -383,6 +444,10 @@ def build_trace_report(summary: Sequence[Mapping[str, Any]]) -> List[str]:
     fallback_by_id = {
         str(sample.get("sample_id")): sample
         for sample in fallback_row.get("samples", [])
+    }
+    multi_intent_by_id = {
+        str(sample.get("sample_id")): sample
+        for sample in multi_intent_row.get("samples", [])
     }
 
     lines: List[str] = [
@@ -416,6 +481,8 @@ def build_trace_report(summary: Sequence[Mapping[str, Any]]) -> List[str]:
         sample_id = str(sample.get("sample_id"))
         cache_only = cache_only_by_id.get(sample_id, {})
         fallback = fallback_by_id.get(sample_id, {})
+        multi_intent = multi_intent_by_id.get(sample_id, {})
+        multi_trace = multi_intent.get("multi_intent_trace") or {}
         cache_trace = cache_only.get("trace") or trace
 
         lines.extend(
@@ -528,6 +595,59 @@ def build_trace_report(summary: Sequence[Mapping[str, Any]]) -> List[str]:
                 "",
                 "Final selected memories:",
                 *format_memory_list(trace_get(trace, "final_selection.selected_memories")),
+                "",
+                "### 多意图缓存规划与路由",
+                "",
+                f"- 实际 Query: {trace_get(multi_trace, 'sample.actual_query')}",
+                f"- Golden Answer: {trace_get(multi_trace, 'sample.gold_answer')}",
+                f"- Golden Memory: {join_values(trace_get(multi_trace, 'sample.gold_evidence_memory_ids'))}",
+                f"- 全局物理缓存预算: {trace_get(multi_trace, 'idle_time_planning.global_cache_budget')}",
+                f"- 实际预取 Memory: {join_values(trace_get(multi_trace, 'idle_time_planning.physical_memory_ids'))}",
+                f"- 多分支共享 Memory: {join_values(trace_get(multi_trace, 'idle_time_planning.shared_memory_ids'))}",
+                f"- 多分支共享 Fact: {join_values(trace_get(multi_trace, 'idle_time_planning.shared_fact_ids'))}",
+                "",
+                "Intent 分支（语义内容、候选事实、图寻路）:",
+                *format_multi_intent_heads(
+                    trace_get(multi_trace, "idle_time_planning.intent_heads")
+                ),
+                "",
+                "联合预算 / 增量 Prefetch 顺序:",
+                *format_dict_list(
+                    trace_get(multi_trace, "idle_time_planning.prefetch_plan"),
+                    keys=[
+                        "prefetch_order",
+                        "memory_id",
+                        "priority",
+                        "branch_ids",
+                        "fact_ids",
+                        "physical_cache_occupancy",
+                    ],
+                ),
+                "",
+                "Query-time cosine + coverage gate:",
+                f"- 路由决策: {trace_get(multi_trace, 'query_time_routing.decision')}",
+                f"- 决策原因: {trace_get(multi_trace, 'query_time_routing.reason')}",
+                f"- 选中 Intent Head: {join_values(trace_get(multi_trace, 'query_time_routing.selected_head_ids'))}",
+                *format_dict_list(
+                    trace_get(multi_trace, "query_time_routing.head_scores"),
+                    keys=[
+                        "head_id",
+                        "raw_intent",
+                        "intent_similarity",
+                        "prepared_readiness",
+                        "semantic_support",
+                        "route_score",
+                        "resident_memory_ids",
+                    ],
+                ),
+                "",
+                "最终回答上下文:",
+                f"- Prepared Memory: {join_values(trace_get(multi_trace, 'final_selection.prepared_memory_ids'))}",
+                f"- Reactive 补全 Memory: {join_values(trace_get(multi_trace, 'final_selection.reactive_repair_memory_ids'))}",
+                f"- Final Memory: {join_values(trace_get(multi_trace, 'final_selection.final_memory_ids'))}",
+                *format_memory_list(
+                    trace_get(multi_trace, "final_selection.final_memories")
+                ),
             ]
         )
     return lines
@@ -583,6 +703,52 @@ def format_dict_list(value: Any, keys: Sequence[str]) -> List[str]:
                 continue
             parts.append(f"{key}={item.get(key)}")
         lines.append("- " + "; ".join(parts))
+    return lines
+
+
+def format_multi_intent_heads(value: Any) -> List[str]:
+    if not value:
+        return ["- (none)"]
+    lines: List[str] = []
+    for head in value:
+        if not isinstance(head, Mapping):
+            lines.append(f"- {head}")
+            continue
+        structured = head.get("structured") or {}
+        lines.append(
+            "- {head_id}: intent={intent}; relation={relation}; answer_type={answer_type}; "
+            "confidence={confidence}; readiness={readiness}; resident={resident}".format(
+                head_id=head.get("id", ""),
+                intent=head.get("raw_intent", ""),
+                relation=structured.get("relation", ""),
+                answer_type=structured.get("answer_type", ""),
+                confidence=head.get("confidence", ""),
+                readiness=head.get("readiness", ""),
+                resident=head.get("resident_memory_ids", []),
+            )
+        )
+        for candidate in head.get("candidates") or []:
+            if not isinstance(candidate, Mapping):
+                continue
+            lines.append(
+                "  - 候选 {memory_id}: score={score}; fact={fact_id}; {summary}".format(
+                    memory_id=candidate.get("memory_id", ""),
+                    score=candidate.get("score", ""),
+                    fact_id=candidate.get("fact_id", ""),
+                    summary=candidate.get("summary", ""),
+                )
+            )
+        for step in head.get("traversal") or []:
+            if not isinstance(step, Mapping):
+                continue
+            lines.append(
+                "  - 寻路 {path}: {seed} -> {target} (via={via})".format(
+                    path=step.get("path", ""),
+                    seed=step.get("seed_memory_id", ""),
+                    target=step.get("target_memory_id", ""),
+                    via=step.get("via_node_id") or "-",
+                )
+            )
     return lines
 
 
@@ -704,6 +870,13 @@ def apply_overrides(config: Dict[str, Any], args: argparse.Namespace) -> None:
     if args.vllm_model is not None:
         llm_config["model"] = args.vllm_model
     config["llm"] = llm_config
+    evaluation_config = dict(config.get("evaluation") or {})
+    judge_config = dict(evaluation_config.get("judge") or {})
+    if bool(judge_config.get("use_same_vllm", False)):
+        judge_config["base_url"] = llm_config["base_url"]
+        judge_config["model"] = llm_config["model"]
+    evaluation_config["judge"] = judge_config
+    config["evaluation"] = evaluation_config
     reranker_config = dict(config.get("reranker") or {})
     if args.disable_reranker:
         reranker_config["enabled"] = False

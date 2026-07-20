@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PreMem 多样本推理归因</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --background: Canvas;
+      --foreground: CanvasText;
+      --card: color-mix(in srgb, CanvasText 4%, Canvas);
+      --muted: color-mix(in srgb, CanvasText 8%, Canvas);
+      --muted-foreground: color-mix(in srgb, CanvasText 66%, Canvas);
+      --border: color-mix(in srgb, CanvasText 18%, Canvas);
+      --primary: Highlight;
+      --primary-foreground: HighlightText;
+      --series-1: var(--viz-series-1, Highlight);
+      --series-2: var(--viz-series-2, color-mix(in srgb, Highlight 68%, CanvasText));
+      --series-3: var(--viz-series-3, color-mix(in srgb, Highlight 55%, Canvas));
+      --series-4: var(--viz-series-4, color-mix(in srgb, CanvasText 76%, Highlight));
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--background);
+      color: var(--foreground);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--background); color: var(--foreground); }
+    main { max-width: 1380px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 5px; font-size: clamp(22px, 4vw, 34px); font-weight: 500; }
+    h2 { margin: 22px 0 8px; font-size: 18px; font-weight: 500; }
+    h3 { margin: 16px 0 7px; font-size: 15px; font-weight: 500; }
+    p { margin: 0; }
+    .subhead { color: var(--muted-foreground); margin-bottom: 16px; }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .card { padding: 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+    .stat-label { color: var(--muted-foreground); font-size: 13px; }
+    .stat-value { margin-top: 4px; font-size: 22px; font-variant-numeric: tabular-nums; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 9px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { color: var(--muted-foreground); font-weight: 500; }
+    .semantic { min-width: 220px; line-height: 1.45; }
+    .nowrap { white-space: nowrap; }
+    button, select {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--foreground);
+      padding: 7px 10px;
+      font: inherit;
+      cursor: pointer;
+    }
+    button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); }
+    button:focus-visible, select:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0; }
+    .diagnosis {
+      margin: 14px 0;
+      padding: 12px 14px;
+      border-left: 4px solid var(--series-4);
+      background: color-mix(in srgb, var(--series-4) 10%, Canvas);
+      line-height: 1.55;
+    }
+    .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .block { padding: 11px 0; border-bottom: 1px solid var(--border); line-height: 1.5; }
+    .block strong { display: block; margin-bottom: 4px; font-weight: 500; }
+    .status {
+      display: inline-block;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px 7px;
+      white-space: nowrap;
+      font-size: 12px;
+    }
+    .hit { background: color-mix(in srgb, var(--series-2) 16%, Canvas); }
+    .miss { background: color-mix(in srgb, var(--series-4) 14%, Canvas); }
+    .prepared { background: color-mix(in srgb, var(--series-3) 16%, Canvas); }
+    .mark-hit { color: var(--series-2); font-weight: 500; text-align: center; }
+    .mark-miss { color: var(--muted-foreground); text-align: center; }
+    .reason { color: var(--muted-foreground); margin-top: 3px; line-height: 1.45; }
+    @media (max-width: 760px) {
+      main { padding: 15px; }
+      .stats, .comparison { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>PreMem 多样本推理归因</h1>
+  <p class="subhead">用实际 Query、预测 Intent 和 Gold 阶段去向判断应该改 predictor、Meta-path、Gap repair 还是 compression。</p>
+
+  <section class="stats">
+    <div class="card">
+      <div class="stat-label">样本数 / Gold evidence</div>
+      <div class="stat-value" id="sampleStat"></div>
+    </div>
+    <div class="card">
+      <div class="stat-label">Predictor Gold 覆盖</div>
+      <div class="stat-value" id="predictorStat"></div>
+    </div>
+    <div class="card">
+      <div class="stat-label">最终 Prepared Gold 覆盖</div>
+      <div class="stat-value" id="finalStat"></div>
+    </div>
+  </section>
+
+  <h2>多样本总览</h2>
+  <div class="table-wrap"><table id="overview"></table></div>
+
+  <div class="controls">
+    <label for="sampleSelect">详细查看</label>
+    <select id="sampleSelect"></select>
+  </div>
+  <section id="detail"></section>
+</main>
+
+<script>
+const batch = __PLANNING_TRACE_BATCH_DATA__;
+const translations = batch.localization?.strings || {};
+const local = value => translations[String(value || "")] || String(value || "");
+const esc = value => String(value || "").replace(/[&<>"']/g, char => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+})[char]);
+const pct = (value, total) => total ? `${(100 * value / total).toFixed(1)}%` : "—";
+const pathLabel = value => ({
+  Intent: "意图", UserGoal: "用户目标", Idea: "想法", Paper: "论文",
+  Claim: "论点", Evidence: "证据", Topic: "主题", Gap: "缺口",
+  contradicts: "矛盾关系"
+})[value] || value;
+const translatedPath = value => String(value || "").split("->")
+  .map(item => pathLabel(item.trim())).join(" → ");
+const mark = hit => `<td class="${hit ? "mark-hit" : "mark-miss"}">${hit ? "✓" : "—"}</td>`;
+const status = (text, cls) => `<span class="status ${cls || ""}">${esc(text)}</span>`;
+
+document.getElementById("sampleStat").textContent = `${batch.sample_count} / ${batch.totals.gold}`;
+document.getElementById("predictorStat").textContent =
+  `${batch.totals.predictor}/${batch.totals.gold} · ${pct(batch.totals.predictor, batch.totals.gold)}`;
+document.getElementById("finalStat").textContent =
+  `${batch.totals.final}/${batch.totals.gold} · ${pct(batch.totals.final, batch.totals.gold)}`;
+
+const overview = document.getElementById("overview");
+overview.innerHTML = `
+  <thead>
+    <tr>
+      <th>样本</th>
+      <th>实际 Query</th>
+      <th>Golden 答案</th>
+      <th>预测 Intent</th>
+      <th>Meta-path</th>
+      <th>Pred</th>
+      <th>Path</th>
+      <th>Repair</th>
+      <th>Final</th>
+    </tr>
+  </thead>
+  <tbody>${batch.samples.map((sample, index) => `
+    <tr>
+      <td class="nowrap">${index + 1}</td>
+      <td class="semantic">${esc(local(sample.actual_query))}</td>
+      <td class="semantic">${esc(local(sample.golden_answer))}</td>
+      <td class="semantic">${sample.predicted_intents.map(item => esc(local(item))).join(" · ")}</td>
+      <td>${sample.paths.map(path => esc(path.path_id)).join(", ") || "—"}</td>
+      <td class="nowrap">${sample.counts.predictor}/${sample.counts.gold}</td>
+      <td class="nowrap">${sample.counts.path}/${sample.counts.gold}</td>
+      <td class="nowrap">${sample.counts.repair}/${sample.counts.gold}</td>
+      <td class="nowrap">${sample.counts.final}/${sample.counts.gold}</td>
+    </tr>`).join("")}</tbody>`;
+
+const select = document.getElementById("sampleSelect");
+batch.samples.forEach((sample, index) => {
+  const option = document.createElement("option");
+  option.value = String(index);
+  option.textContent = `样本 ${index + 1}：${local(sample.actual_query)}`;
+  select.appendChild(option);
+});
+select.addEventListener("change", () => renderSample(Number(select.value)));
+
+function renderSample(index) {
+  const sample = batch.samples[index];
+  const detail = document.getElementById("detail");
+  const counts = sample.counts;
+  const intentProblem = counts.predictor < counts.gold;
+  const pathProblem = counts.path_rescued === 0 && counts.predictor < counts.gold;
+  const repairProblem = counts.repair_rescued === 0 && counts.candidate < counts.gold;
+  const compressionProblem = counts.compression_lost > 0;
+  const verdicts = [
+    intentProblem ? `Intent working-set 预测只覆盖 ${counts.predictor}/${counts.gold} 条 Gold，需要改进。`
+      : "Intent predictor 已覆盖全部 Gold。",
+    pathProblem ? "Meta-path 没有救回 predictor 漏掉的 Gold，需要改路径本体和执行方式。"
+      : `Meta-path 额外救回 ${counts.path_rescued} 条 Gold。`,
+    repairProblem ? "Gap repair 没有补回遗漏 Gold，support schema / repair query 需要改进。"
+      : `Gap repair 额外救回 ${counts.repair_rescued} 条 Gold。`,
+    compressionProblem ? `Compression 又丢失 ${counts.compression_lost} 条 Gold。`
+      : "Compression 没有额外丢失已经进入候选池的 Gold。"
+  ];
+
+  detail.innerHTML = `
+    <div class="diagnosis"><strong>归因结论：</strong>${verdicts.join(" ")}</div>
+    <div class="comparison">
+      <div class="block">
+        <strong>实际 Query</strong>
+        ${esc(local(sample.actual_query))}
+        <div class="reason">Golden：${esc(local(sample.golden_answer))}</div>
+      </div>
+      <div class="block">
+        <strong>预测 Intent</strong>
+        ${sample.predicted_intents.map(item => esc(local(item))).join(" · ")}
+      </div>
+    </div>
+
+    <h2>Gold evidence 阶段去向</h2>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>Gold 语义内容</th><th>Predictor</th><th>Meta-path</th>
+        <th>Gap repair</th><th>Candidate</th><th>Final</th>
+      </tr></thead>
+      <tbody>${sample.gold_rows.map(row => `<tr>
+        <td class="semantic">${esc(local(row.summary))}</td>
+        ${mark(row.predictor)}${mark(row.path)}${mark(row.repair)}
+        ${mark(row.candidate)}${mark(row.final)}
+      </tr>`).join("")}</tbody>
+    </table></div>
+
+    <h2>Intent predictor 推理内容</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Gold</th><th>选择的语义记忆</th><th>选择理由与置信度</th></tr></thead>
+      <tbody>${sample.predictor_items.map(item => `<tr>
+        <td>${status(item.gold ? "GOLD" : "非 Gold", item.gold ? "hit" : "prepared")}</td>
+        <td class="semantic">${esc(local(item.summary))}</td>
+        <td class="semantic">${esc(local(item.reason))}<div class="reason">置信度 ${item.confidence.toFixed(2)}</div></td>
+      </tr>`).join("")}</tbody>
+    </table></div>
+
+    <h2>Meta-path 选择与召回内容</h2>
+    ${sample.paths.map(path => `
+      <div class="block">
+        <strong>${esc(path.path_id)}：${esc(translatedPath(path.path))}</strong>
+        选择理由：${esc(local(path.reason))}
+        <div class="reason">实际执行：全库文本排名 → Top-k → 邻接边展开；命中 ${path.gold_count} 条 Gold。</div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Gold</th><th>路径召回语义</th><th>排名 / 分数</th></tr></thead>
+        <tbody>${path.items.map(item => `<tr>
+          <td>${status(item.gold ? "GOLD" : "非 Gold", item.gold ? "hit" : "")}</td>
+          <td class="semantic">${esc(local(item.summary))}</td>
+          <td>第 ${item.rank} 名 / ${item.score.toFixed(3)}</td>
+        </tr>`).join("")}</tbody>
+      </table></div>`).join("") || "<p>未选择 Meta-path。</p>"}
+
+    <h2>Support check 与 Gap reasoning</h2>
+    <div class="block">
+      <strong>Support status：${supportLabel(sample.support_check.support_status)}</strong>
+      已支持：${(sample.support_check.supported_claims || []).map(item => esc(local(item))).join("；") || "无"}
+      <div class="reason">缺失：${(sample.support_check.missing_support || []).map(item => esc(local(item))).join("；") || "无"}</div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Gap 类型</th><th>缺失内容</th><th>Repair query</th></tr></thead>
+      <tbody>${sample.gaps.map(gap => `<tr>
+        <td>${gapLabel(gap.gap_type)}</td>
+        <td class="semantic">${esc(local(gap.missing_support))}</td>
+        <td class="semantic">${esc(local(gap.repair_query))}</td>
+      </tr>`).join("")}</tbody>
+    </table></div>
+
+    <h3>Gap repair 返回内容</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Gold</th><th>修复证据语义</th><th>分数</th></tr></thead>
+      <tbody>${sample.repair_items.slice(0, 8).map(item => `<tr>
+        <td>${status(item.gold ? "GOLD" : "非 Gold", item.gold ? "hit" : "")}</td>
+        <td class="semantic">${esc(local(item.summary))}</td>
+        <td>${item.score.toFixed(3)}</td>
+      </tr>`).join("")}</tbody>
+    </table></div>
+  `;
+}
+
+function supportLabel(value) {
+  return ({ sufficient: "充分", partial: "部分支持", insufficient: "不足" })[value] || value || "未知";
+}
+function gapLabel(value) {
+  return ({
+    evidence_gap: "证据缺口", coverage_gap: "覆盖缺口", conflict_gap: "冲突缺口",
+    freshness_gap: "时效缺口", personalization_gap: "个性化缺口", definition_gap: "定义缺口"
+  })[value] || value || "未知";
+}
+
+renderSample(0);
+</script>
+</body>
+</html>

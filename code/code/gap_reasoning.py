@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from time import perf_counter
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from .graph_store import GraphStore, memory_catalog
@@ -75,21 +76,121 @@ def build_prepared_context(
     prediction: Prediction,
     llm_client: Optional[VLLMClient],
     config: Mapping[str, Any],
+    planning_trace: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     reasoning_config = _reasoning_config(config)
+    trace = planning_trace
+
+    stage_start = perf_counter()
     intent = _intent_from_prediction(context_key, history, prediction)
+    _record_planning_stage(
+        trace,
+        "intent_materialization",
+        "Materialize predicted intent",
+        stage_start,
+        {
+            "input_count": len(prediction.predicted_future_intents),
+            "intent": intent,
+        },
+    )
+
+    _set_trace_stage(llm_client, "meta_path_selection")
+    stage_start = perf_counter()
     selected_paths = select_meta_paths(intent, history, llm_client, config)
+    _record_planning_stage(
+        trace,
+        "meta_path_selection",
+        "Select conceptual meta-paths",
+        stage_start,
+        {
+            "candidate_path_count": len(META_PATH_LIBRARY),
+            "selected_path_count": len(selected_paths),
+            "selected_paths": selected_paths,
+        },
+    )
+
+    stage_start = perf_counter()
     activated_nodes, executed_paths, path_memory_ids = execute_meta_paths(
         intent=intent,
         selected_paths=selected_paths,
         memory_nodes=memory_nodes,
         graph=graph,
         config=config,
+        include_trace=planning_trace is not None,
     )
+    _record_planning_stage(
+        trace,
+        "meta_path_execution",
+        "Execute path-conditioned memory activation",
+        stage_start,
+        {
+            "execution_mode": "path_conditioned_global_ranking_then_local_subgraph",
+            "selected_path_count": len(executed_paths),
+            "activated_node_count": len(activated_nodes),
+            "unique_path_memory_count": len(unique(path_memory_ids)),
+            "executed_paths": executed_paths,
+        },
+    )
+
+    _set_trace_stage(llm_client, "support_check")
+    stage_start = perf_counter()
     support_check = check_support(intent, activated_nodes, llm_client, config)
+    _record_planning_stage(
+        trace,
+        "support_check",
+        "Check whether activated graph supports the intent",
+        stage_start,
+        {
+            "activated_node_count": len(activated_nodes),
+            "support_check": support_check,
+        },
+    )
+
+    _set_trace_stage(llm_client, "gap_generation")
+    stage_start = perf_counter()
     gaps = generate_gaps(intent, support_check, llm_client, config)
+    _record_planning_stage(
+        trace,
+        "gap_generation",
+        "Generate missing-support GapNodes",
+        stage_start,
+        {
+            "support_status": support_check.get("support_status"),
+            "gap_count": len(gaps),
+            "gaps": gaps,
+        },
+    )
+
+    stage_start = perf_counter()
     evidence = repair_gaps(gaps, memory_nodes, config)
+    _record_planning_stage(
+        trace,
+        "gap_repair",
+        "Retrieve evidence for each gap",
+        stage_start,
+        {
+            "gap_count": len(gaps),
+            "evidence_count": len(evidence),
+            "evidence": evidence,
+        },
+    )
+
+    _set_trace_stage(llm_client, "evidence_binding")
+    stage_start = perf_counter()
     bindings = bind_evidence(intent, gaps, evidence, llm_client, config)
+    _record_planning_stage(
+        trace,
+        "evidence_binding",
+        "Bind evidence to GapNodes",
+        stage_start,
+        {
+            "evidence_count": len(evidence),
+            "binding_count": len(bindings),
+            "bindings": bindings,
+        },
+    )
+
+    stage_start = perf_counter()
     candidate_memory_ids = unique(
         [
             item.id
@@ -106,6 +207,29 @@ def build_prepared_context(
 
     usable_claims = _build_usable_claims(intent, gaps, evidence, bindings)
     candidate_memory_ids = candidate_memory_ids[: int(reasoning_config.get("working_context_budget") or 12)]
+    _record_planning_stage(
+        trace,
+        "candidate_merge",
+        "Merge predictor, path, and repair candidates",
+        stage_start,
+        {
+            "predictor_memory_ids": [
+                item.id for item in prediction.activated_memory_ids if item.id
+            ],
+            "path_memory_ids": unique(path_memory_ids),
+            "repair_memory_ids": unique(
+                [
+                    str(item.get("source_id"))
+                    for item in evidence
+                    if item.get("source_type") == "memory" and item.get("source_id")
+                ]
+            ),
+            "working_context_budget": int(reasoning_config.get("working_context_budget") or 12),
+            "candidate_memory_ids": candidate_memory_ids,
+        },
+    )
+
+    stage_start = perf_counter()
     final_memory_ids, compression = compress_prepared_memories(
         candidate_memory_ids=candidate_memory_ids,
         intent=intent,
@@ -117,7 +241,20 @@ def build_prepared_context(
         graph=graph,
         config=config,
     )
-    return {
+    _record_planning_stage(
+        trace,
+        "cache_compression",
+        "Compress candidates into the prepared cache",
+        stage_start,
+        {
+            "candidate_count": len(candidate_memory_ids),
+            "final_count": len(final_memory_ids),
+            "final_memory_ids": final_memory_ids,
+            "compression": compression,
+        },
+    )
+
+    result = {
         "context_package_id": f"ctx_{_stable_suffix(context_key)}",
         "intent_node": intent,
         "target_intent": intent["content"],
@@ -153,6 +290,9 @@ def build_prepared_context(
             "llm_enabled": bool(reasoning_config.get("use_llm", True)),
         },
     }
+    if planning_trace is not None:
+        result["planning_trace"] = planning_trace
+    return result
 
 
 def compress_prepared_memories(
@@ -454,6 +594,7 @@ def execute_meta_paths(
     memory_nodes: Sequence[MemoryNode],
     graph: GraphStore,
     config: Mapping[str, Any],
+    include_trace: bool = False,
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[str]]:
     reasoning_config = _reasoning_config(config)
     per_path_k = int(reasoning_config.get("per_path_top_k") or 4)
@@ -496,17 +637,91 @@ def execute_meta_paths(
                 existing_paths.add(path_id)
                 activated_by_id[node_id]["path_id"] = ",".join(sorted(item for item in existing_paths if item))
 
-        executed_paths.append(
-            {
-                "path_id": path_id,
-                "path": _path_by_id(path_id).get("path"),
-                "selected_memory_ids": selected_memory_ids,
-                "node_count": len(subgraph.get("nodes") or []),
-                "edge_count": len(subgraph.get("edges") or []),
-            }
-        )
+        execution_record: Dict[str, Any] = {
+            "path_id": path_id,
+            "path": _path_by_id(path_id).get("path"),
+            "reason": str(selection.get("reason") or ""),
+            "execution_mode": "path_conditioned_global_ranking_then_local_subgraph",
+            "selected_memory_ids": selected_memory_ids,
+            "node_count": len(subgraph.get("nodes") or []),
+            "edge_count": len(subgraph.get("edges") or []),
+        }
+        if include_trace:
+            ranking_limit = int(reasoning_config.get("trace_ranking_limit") or 20)
+            execution_record.update(
+                {
+                    "ranking": [
+                        {
+                            "rank": rank,
+                            "memory_id": memory.id,
+                            "score": round(float(score), 6),
+                            "selected": rank <= per_path_k,
+                            "summary": truncate(memory.summary, 180),
+                        }
+                        for rank, (score, memory) in enumerate(
+                            scored[: max(per_path_k, ranking_limit)],
+                            start=1,
+                        )
+                    ],
+                    "route_steps": [
+                        {
+                            "step": 1,
+                            "operation": "intent_seed",
+                            "input_ids": [str(intent.get("node_id") or "predicted_intent")],
+                            "output_ids": [],
+                            "uses_graph_edges": False,
+                        },
+                        {
+                            "step": 2,
+                            "operation": "path_conditioned_global_memory_ranking",
+                            "input_ids": [],
+                            "output_ids": selected_memory_ids,
+                            "uses_graph_edges": False,
+                        },
+                        {
+                            "step": 3,
+                            "operation": "incident_edge_local_subgraph_expansion",
+                            "input_ids": selected_memory_ids,
+                            "output_ids": [
+                                str(node.get("id") or "")
+                                for node in subgraph.get("nodes") or []
+                                if node.get("id")
+                            ],
+                            "uses_graph_edges": True,
+                        },
+                    ],
+                    "local_subgraph": subgraph,
+                }
+            )
+        executed_paths.append(execution_record)
 
     return list(activated_by_id.values()), executed_paths, unique(memory_ids)
+
+
+def _record_planning_stage(
+    trace: Optional[List[Dict[str, Any]]],
+    stage_id: str,
+    label: str,
+    stage_start: float,
+    data: Mapping[str, Any],
+) -> None:
+    if trace is None:
+        return
+    trace.append(
+        {
+            "index": len(trace) + 1,
+            "stage_id": stage_id,
+            "label": label,
+            "elapsed_ms": round((perf_counter() - stage_start) * 1000.0, 3),
+            "data": dict(data),
+        }
+    )
+
+
+def _set_trace_stage(llm_client: Optional[VLLMClient], stage_id: str) -> None:
+    setter = getattr(llm_client, "set_trace_stage", None)
+    if callable(setter):
+        setter(stage_id)
 
 
 def check_support(
